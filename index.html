@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Butacas</title>
+    <style>
+        body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #f4f4f5; margin: 0; }
+        
+        /* Pantalla de login */
+        #login-screen { max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        button.btn-primary { background: #000; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button.btn-primary:hover { background: #333; }
+
+        /* Interfaz principal */
+        #app-screen { display: none; }
+        #status-banner { padding: 1rem; margin-bottom: 2rem; border-radius: 8px; font-weight: bold; }
+        .queued { background: #fef08a; color: #854d0e; }
+        .active { background: #bbf7d0; color: #166534; }
+        
+        .session-block { margin-bottom: 4rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .session-title { margin-top: 0; color: #333; }
+        
+        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; max-width: 500px; margin: 0 auto 1.5rem auto; }
+        .seat { padding: 12px 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; border: none; transition: background 0.1s; }
+        
+        .free { background: #e2e8f0; color: #475569; }
+        .free:hover { background: #cbd5e1; }
+        .reserved { background: #ef4444; color: white; cursor: not-allowed; }
+        .my-seat { background: #22c55e; color: white; } /* Verde para tus butacas */
+        .my-seat:hover { background: #16a34a; }
+
+        .escenario { max-width: 400px; margin: 0 auto; padding: 15px; background: #334155; color: white; font-weight: bold; border-radius: 4px; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <h2>Datos de reserva</h2>
+        <input type="text" id="input-nombre" placeholder="Nombre" required>
+        <input type="text" id="input-apellido" placeholder="Apellido" required>
+        <button class="btn-primary" onclick="iniciarApp()">Entrar a la sala</button>
+    </div>
+
+    <div id="app-screen">
+        <h2>Espectáculo de Danza</h2>
+        <div id="status-banner" class="queued">Conectando al servidor...</div>
+        
+        <div id="sessions-container" style="display: none;"></div>
+    </div>
+
+    <script>
+        let ws;
+        let clientId = localStorage.getItem("clientId");
+        if (!clientId) {
+            clientId = crypto.randomUUID();
+            localStorage.setItem("clientId", clientId);
+        }
+
+        // Auto-login si ya teníamos los datos guardados
+        window.onload = () => {
+            const storedNombre = localStorage.getItem("nombre");
+            const storedApellido = localStorage.getItem("apellido");
+            if (storedNombre && storedApellido) {
+                document.getElementById("input-nombre").value = storedNombre;
+                document.getElementById("input-apellido").value = storedApellido;
+                iniciarApp();
+            }
+        };
+
+        function iniciarApp() {
+            const nombre = document.getElementById("input-nombre").value.trim();
+            const apellido = document.getElementById("input-apellido").value.trim();
+            
+            if (!nombre || !apellido) {
+                alert("Por favor, rellena nombre y apellido.");
+                return;
+            }
+
+            localStorage.setItem("nombre", nombre);
+            localStorage.setItem("apellido", apellido);
+
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("app-screen").style.display = "block";
+            conectarWebSocket(nombre, apellido);
+        }
+
+function conectarWebSocket(nombre, apellido) {
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            const wsUrl = `${protocol}://${window.location.host}/ws/${clientId}?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}`;
+            
+            ws = new WebSocket(wsUrl);
+            const banner = document.getElementById("status-banner");
+            const container = document.getElementById("sessions-container");
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "status") {
+                    if (data.status === "queued") {
+                        banner.className = "queued";
+                        banner.innerText = `Estás en la cola. Posición: ${data.position}`;
+                        container.style.display = "none";
+                    } else if (data.status === "active") {
+                        banner.className = "active";
+                        banner.innerText = "¡Es tu turno! Selecciona tus butacas.";
+                        container.style.display = "block";
+                    }
+                }
+
+                if (data.type === "seats_update") {
+                    renderizarSesiones(data.seats);
+                }
+                
+                // Manejador para el mensaje de error del backend
+                if (data.type === "error") {
+                    alert(data.message);
+                }
+            };
+        }
+
+        function renderizarSesiones(seats) {
+            const container = document.getElementById("sessions-container");
+            container.innerHTML = ""; 
+            
+            // Calculamos cuántos asientos tiene ya este cliente en total
+            const mySeatsCount = seats.filter(seat => seat.owner_id === clientId).length;
+
+            const sesiones = ['11h', '12:45h', '18h'];
+            const asientosPorSesion = {};
+            sesiones.forEach(s => asientosPorSesion[s] = seats.filter(seat => seat.session_time === s));
+
+            sesiones.forEach(sesion => {
+                const block = document.createElement("div");
+                block.className = "session-block";
+                
+                const title = document.createElement("h3");
+                title.className = "session-title";
+                title.innerText = `Sesión ${sesion}`;
+                block.appendChild(title);
+
+                const grid = document.createElement("div");
+                grid.className = "grid";
+
+                asientosPorSesion[sesion].forEach(seat => {
+                    const btn = document.createElement("button");
+                    btn.innerText = seat.seat_number;
+                    
+                    if (seat.status === "free") {
+                        btn.className = "seat free";
+                    } else if (seat.status === "reserved" && seat.owner_id === clientId) {
+                        btn.className = "seat my-seat"; 
+                    } else {
+                        btn.className = "seat reserved"; 
+                    }
+
+                    btn.onclick = () => {
+                        // Si está libre, validamos el límite localmente
+                        if (seat.status === "free") {
+                            if (mySeatsCount >= 6) {
+                                alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                return; // Detenemos la ejecución, no se envía nada al servidor
+                            }
+                            ws.send(JSON.stringify({ 
+                                action: "toggle", 
+                                seat_number: seat.seat_number,
+                                session_time: sesion
+                            }));
+                        } 
+                        // Siempre permitimos deseleccionar un asiento propio
+                        else if (seat.owner_id === clientId) {
+                            ws.send(JSON.stringify({ 
+                                action: "toggle", 
+                                seat_number: seat.seat_number,
+                                session_time: sesion
+                            }));
+                        }
+                    };
+                    grid.appendChild(btn);
+                });
+
+                block.appendChild(grid);
+
+                const escenario = document.createElement("div");
+                escenario.className = "escenario";
+                escenario.innerText = "ESCENARIO";
+                block.appendChild(escenario);
+
+                container.appendChild(block);
+            });
+        }
+    </script>
+</body>
+</html>

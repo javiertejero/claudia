@@ -1,0 +1,6 @@
+# Sustituye esto por el dominio real
+claudia-espectacle-de-dansa.duckdns.org {
+    tls internal  # temporalmente para 127.0.0.1
+    # Redirigimos el tráfico al contenedor de la aplicación por el puerto 8000
+    reverse_proxy app:8000
+}

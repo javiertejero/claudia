@@ -1,0 +1,10 @@
+[project]
+name = "claudia espectacle de dansa"
+version = "0.1.0"
+description = "Reserva de seients a l'ateneu"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "fastapi[standard]>=0.136.1"
+]
