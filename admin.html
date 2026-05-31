@@ -23,8 +23,18 @@
 <body>
 
     <div class="header">
-        <h1>Control de Aforo</h1>
-        <div><span class="status-dot"></span> En vivo</div>
+        <div>
+            <h1 style="margin-bottom: 0;">Control de Aforo</h1>
+            <div style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
+                <span class="status-dot"></span> En vivo
+                <span style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
+                    👥 Editando: <strong id="active-count" style="color: #2563eb;">0</strong>
+                </span>
+                <span style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
+                    ⏳ En cola: <strong id="queued-count" style="color: #ea580c;">0</strong>
+                </span>
+            </div>
+        </div>
     </div>
 
     <div class="stats-container" id="stats">
@@ -58,6 +68,10 @@
             const data = JSON.parse(event.data);
             if (data.type === "admin_update") {
                 renderDashboard(data.seats);
+            } 
+            else if (data.type === "admin_stats") {
+                document.getElementById("active-count").innerText = data.active_users;
+                document.getElementById("queued-count").innerText = data.queued_users;
             }
         };
 

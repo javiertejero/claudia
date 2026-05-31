@@ -108,6 +108,7 @@ async def process_queue():
             await active_connections[client_id].send_text(
                 json.dumps({"type": "status", "status": "queued", "position": i + 1})
             )
+    await broadcast_admin_stats()
 
 @app.get("/")
 async def get_index():
@@ -132,6 +133,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
             waiting_queue.append(client_id)
         pos = waiting_queue.index(client_id) + 1 if client_id in waiting_queue else 0
         await websocket.send_text(json.dumps({"type": "status", "status": "queued", "position": pos}))
+
+    await broadcast_admin_stats()
 
     try:
         while True:
@@ -198,6 +201,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
         if client_id in waiting_queue:
             waiting_queue.remove(client_id)
         await process_queue()
+        await broadcast_admin_stats()
 
 @app.get("/admin/{secret}")
 async def get_admin_panel(secret: str):
@@ -218,10 +222,25 @@ async def admin_websocket(websocket: WebSocket, secret: str):
         # Enviar el estado actual nada más conectar
         seats = await get_all_seats()
         await websocket.send_text(json.dumps({"type": "admin_update", "seats": seats}))
-        
+        await broadcast_admin_stats()
         while True:
             # Mantenemos la conexión viva
             await websocket.receive_text()
             
     except WebSocketDisconnect:
         admin_connections.remove(websocket)
+
+
+async def broadcast_admin_stats():
+    """Envía el conteo de usuarios activos y en cola a los administradores."""
+    if admin_connections:
+        message = json.dumps({
+            "type": "admin_stats",
+            "active_users": len(active_users),
+            "queued_users": len(waiting_queue)
+        })
+        for admin_ws in list(admin_connections):
+            try:
+                await admin_ws.send_text(message)
+            except Exception:
+                pass
