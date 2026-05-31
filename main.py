@@ -1,8 +1,12 @@
+import html
+import logging
 import json
 from contextlib import asynccontextmanager
 import aiosqlite
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+
+logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
@@ -98,7 +102,9 @@ async def get_index():
 async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str = "", apellido: str = ""):
     await websocket.accept()
     active_connections[client_id] = websocket
-    active_users_names[client_id] = f"{nombre} {apellido}".strip()
+    nombre_limpio = html.escape(nombre[:50])     # Máximo 50 caracteres
+    apellido_limpio = html.escape(apellido[:50])
+    active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
 
     if len(active_users) < MAX_ACTIVE_USERS:
         active_users.add(client_id)
@@ -115,39 +121,57 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
     try:
         while True:
             data = await websocket.receive_text()
-            payload = json.loads(data)
-            
+            try:
+                payload = json.loads(data)
+            except json.JSONDecodeError as exc:
+                logger.error("Error decoding json %s", exc)
+                continue # Si no es un JSON válido, lo ignoramos
+
             if client_id in active_users and payload.get("action") == "toggle":
-                seat_num = payload["seat_number"]
-                sess_time = payload["session_time"]
+                # Usamos .get() y validamos el tipo para evitar excepciones
+                seat_num = payload.get("seat_number")
+                sess_time = payload.get("session_time")
+                if not isinstance(seat_num, int) or not isinstance(sess_time, str):
+                    logger.warning("Invalid seat_num (%s) or sess_time (%s)", seat_num, sess_time)
+                    continue # Ignoramos cargas útiles manipuladas
                 user_full_name = active_users_names.get(client_id, "Desconocido")
                 
                 async with aiosqlite.connect(DB_FILE) as db:
-                    async with db.execute('SELECT status, owner_id FROM seats WHERE seat_number = ? AND session_time = ?', (seat_num, sess_time)) as cursor:
-                        row = await cursor.fetchone()
-                        if row:
-                            status, owner_id = row
-                            
-                            if status == 'free':
-                                # Comprobar cuántos asientos tiene ya este usuario
-                                async with db.execute('SELECT COUNT(*) FROM seats WHERE owner_id = ?', (client_id,)) as count_cursor:
-                                    user_seats_count = (await count_cursor.fetchone())[0]
-                                
-                                if user_seats_count >= 6:
-                                    # Si ya tiene 6 o más, enviamos un mensaje de error solo a este usuario
-                                    await websocket.send_text(json.dumps({
-                                        "type": "error",
-                                        "message": "Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento..."
-                                    }))
-                                else:
-                                    # Si tiene menos de 6, permitimos la reserva
-                                    await db.execute('UPDATE seats SET status = "reserved", owner_id = ?, owner_name = ? WHERE seat_number = ? AND session_time = ?', (client_id, user_full_name, seat_num, sess_time))
-                                    
-                            elif status == 'reserved' and owner_id == client_id:
-                                # Siempre permitimos liberar un asiento propio
-                                await db.execute('UPDATE seats SET status = "free", owner_id = NULL, owner_name = NULL WHERE seat_number = ? AND session_time = ?', (seat_num, sess_time))
-                            
-                            await db.commit()
+                    # 1. Obtenemos cuántos tiene ANTES de intentar reservar
+                    async with db.execute('SELECT COUNT(*) FROM seats WHERE owner_id = ?', (client_id,)) as cursor:
+                        user_seats_count = (await cursor.fetchone())[0]
+
+                    # Intentamos reservar (Operación Atómica)
+                    if user_seats_count < 6:
+                        cursor = await db.execute('''
+                            UPDATE seats 
+                            SET status = "reserved", owner_id = ?, owner_name = ? 
+                            WHERE seat_number = ? AND session_time = ? AND status = "free"
+                        ''', (client_id, user_full_name, seat_num, sess_time))
+                        
+                        # Si affected_rows (rowcount) es 0, significa que o no estaba libre (condición de carrera ganada por otro) o no existe
+                        if cursor.rowcount == 0:
+                            # Comprobamos si el usuario está intentando liberar un asiento que ya era suyo
+                            await db.execute('''
+                                UPDATE seats 
+                                SET status = "free", owner_id = NULL, owner_name = NULL 
+                                WHERE seat_number = ? AND session_time = ? AND owner_id = ?
+                            ''', (seat_num, sess_time, client_id))
+                    else:
+                        # Si ya tiene 6, SOLO le dejamos liberar los suyos
+                        await db.execute('''
+                            UPDATE seats 
+                            SET status = "free", owner_id = NULL, owner_name = NULL 
+                            WHERE seat_number = ? AND session_time = ? AND owner_id = ?
+                        ''', (seat_num, sess_time, client_id))
+                        
+                        # Y le enviamos el aviso
+                        await websocket.send_text(json.dumps({
+                            "type": "error",
+                            "message": "Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento..."
+                        }))
+
+                    await db.commit()
                 # Refrescamos la vista para todos los usuarios activos
                 await broadcast_seats()
                 
