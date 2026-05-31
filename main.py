@@ -1,13 +1,17 @@
+import aiosqlite
 import asyncio
+import csv
 import html
-import os
-import logging
+import io
 import json
+import logging
+import math
+import os
 import uuid
 from contextlib import asynccontextmanager
-import aiosqlite
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -275,3 +279,50 @@ async def broadcast_admin_stats():
                 await admin_ws.send_text(message)
             except Exception:
                 pass
+
+@app.get("/admin/{secret}/export.csv")
+async def export_csv(secret: str):
+    if secret != ADMIN_SECRET:
+        return {"error": "No autorizado"}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    mitad = ASIENTOS_POR_FILA // 2
+
+    writer.writerow(
+        ["Sesión", "Nombre y Apellidos", "Fila", "Butaca", "ID_Interno_BD"]
+    )
+
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("""
+        SELECT session_time, owner_name, seat_number 
+        FROM seats 
+        WHERE status = 'reserved'
+        ORDER BY session_time, owner_name
+        """) as cursor:
+
+            async for session, owner, seat_id in cursor:
+                fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
+                pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
+
+                # La misma lógica del estándar de teatro
+                if pos_in_row < mitad:
+                    butaca = ((mitad - 1 - pos_in_row) * 2) + 1
+                else:
+                    butaca = ((pos_in_row - mitad) * 2) + 2
+
+                writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
+
+
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="reservas.csv"'
+        }
+    )

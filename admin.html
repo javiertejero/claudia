@@ -35,6 +35,11 @@
                 </span>
             </div>
         </div>
+        <div>
+            <button id="export-btn">
+                📥 Exportar CSV
+            </button>
+        </div>
     </div>
 
     <div class="stats-container" id="stats">
@@ -124,6 +129,9 @@
                 tbody.appendChild(tr);
             });
         }
+        document.getElementById("export-btn").addEventListener("click", () => {
+            window.location.href = `/admin/${secret}/export.csv`;
+        });
     </script>
 </body>
 </html>
