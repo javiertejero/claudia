@@ -198,6 +198,22 @@
                     `;
                     if (ws) ws.close(); // Cerramos explícitamente en cliente
                 }
+
+                // Capturar el evento de multipestaña
+                if (data.type === "duplicate") {
+                    clearInterval(timerInterval);
+                    
+                    // Borramos toda la interfaz sustituyendo el body
+                    document.body.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h2 style="color: #ef4444; margin-top: 0;">⚠️ Sesión Anulada</h2>
+                            <p>${data.message}</p>
+                            <p style="font-size: 0.9em; color: #64748b; margin-top: 2rem;">Puedes continuar tu reserva en la pestaña nueva.</p>
+                        </div>
+                    `;
+                    
+                    if (ws) ws.close(); // Cerramos la conexión desde el cliente por si acaso
+                }
             };
         }
 

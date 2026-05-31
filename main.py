@@ -145,6 +145,20 @@ async def get_index():
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str = "", apellido: str = ""):
     await websocket.accept()
+
+    # 1. LÓGICA MULTIPESTAÑA: Expulsar conexión antigua si existe
+    if client_id in active_connections:
+        old_ws = active_connections[client_id]
+        try:
+            # Avisamos a la pestaña vieja
+            await old_ws.send_text(json.dumps({
+                "type": "duplicate",
+                "message": "Has abierto la página en otra pestaña, esta ha quedado anulada. Disculpas."
+            }))
+            await old_ws.close()
+        except Exception:
+            pass
+
     active_connections[client_id] = websocket
     nombre_limpio = html.escape(nombre[:50])     # Máximo 50 caracteres
     apellido_limpio = html.escape(apellido[:50])
@@ -223,20 +237,20 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
                 await broadcast_seats()
                 
     except WebSocketDisconnect:
-        if client_id in active_connections:
+        # 2. CORRECCIÓN DE CONCURRENCIA: Solo limpiamos si la conexión que muere es la activa
+        if active_connections.get(client_id) == websocket:
             del active_connections[client_id]
-        if client_id in active_users:
-            active_users.remove(client_id)
-        if client_id in waiting_queue:
-            waiting_queue.remove(client_id)
-            
-        # CANCELAR SU RELOJ SI SE VA ANTES DE TIEMPO
-        if client_id in active_user_tasks:
-            active_user_tasks[client_id].cancel()
-            del active_user_tasks[client_id]
-            
-        await process_queue()
-        await broadcast_admin_stats()
+            if client_id in active_users:
+                active_users.remove(client_id)
+            if client_id in waiting_queue:
+                waiting_queue.remove(client_id)
+                
+            if client_id in active_user_tasks:
+                active_user_tasks[client_id].cancel()
+                del active_user_tasks[client_id]
+                
+            await process_queue()
+            await broadcast_admin_stats()
 
 @app.get("/admin/{secret}")
 async def get_admin_panel(secret: str):
