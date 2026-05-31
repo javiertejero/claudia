@@ -16,6 +16,8 @@ active_connections = {}  # {client_id: websocket}
 active_users_names = {}  # {client_id: "Nombre Apellido"}
 waiting_queue = []       
 active_users = set()     
+ASIENTOS_POR_FILA = 20
+FILAS = 10
 
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
@@ -36,7 +38,7 @@ async def init_db():
                 for session in ['11h', '12:45h', '18h']:
                     await db.executemany(
                         'INSERT INTO seats (seat_number, session_time, status) VALUES (?, ?, ?)',
-                        [(i, session, 'free') for i in range(1, 51)]
+                        [(i, session, 'free') for i in range(1, ASIENTOS_POR_FILA * FILAS + 1)]
                     )
         await db.commit()
 

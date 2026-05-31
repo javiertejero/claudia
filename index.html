@@ -24,8 +24,8 @@
         
         .grid { 
             display: grid; 
-            /* 1 columna adaptable para la 'Fila', 10 fracciones iguales para asientos */
-            grid-template-columns: max-content repeat(10, 1fr); 
+            /* 1 columna adaptable para la 'Fila', ASIENTOS_POR_FILA fracciones iguales para asientos */
+            grid-template-columns: max-content repeat(20, 1fr); 
             gap: 8px; 
             max-width: 550px; 
             margin: 0 auto 1.5rem auto; 
@@ -86,6 +86,7 @@
     </div>
 
     <script>
+        const ASIENTOS_POR_FILA = 20;
         let ws;
         let clientId = localStorage.getItem("clientId");
         if (!clientId) {
@@ -194,8 +195,8 @@
                 
                 let rowCounter = 1;
                 asientosPorSesion[sesion].forEach((seat, index) => {
-                    // 1. Inyectar la cabecera de fila al principio de cada bloque de 10
-                    if (index % 10 === 0) {
+                    // 1. Inyectar la cabecera de fila al principio de cada bloque de ASIENTOS_POR_FILA
+                    if (index % ASIENTOS_POR_FILA === 0) {
                         const rowHeader = document.createElement("div");
                         rowHeader.className = "row-header";
                         rowHeader.innerText = `F${rowCounter}`;
@@ -204,9 +205,9 @@
                     }
 
                     // 2. Calcular el número visual de la butaca
-                    const posInRow = index % 10;
-                    // Si está en la primera mitad (0-4), es impar. Si está en la segunda (5-9), es par.
-                    const theatreSeatNum = posInRow < 5 ? (posInRow * 2) + 1 : ((posInRow - 5) * 2) + 2;
+                    const posInRow = index % ASIENTOS_POR_FILA;
+                    // Si está en la primera mitad, es impar. Si está en la segunda, es par.
+                    const theatreSeatNum = posInRow < (ASIENTOS_POR_FILA / 2) ? (posInRow * 2) + 1 : ((posInRow - (ASIENTOS_POR_FILA / 2)) * 2) + 2;
 
                     const btn = document.createElement("button");
                     btn.innerText = theatreSeatNum;

@@ -4,6 +4,7 @@ import math
 
 DB_FILE = "data/reservas.db"
 CSV_FILE = "reservas_espectaculo.csv"
+ASIENTOS_POR_FILA = 20
 
 def exportar_csv():
     # Usamos la librería estándar para no necesitar asyncio en un script síncrono
@@ -27,13 +28,13 @@ def exportar_csv():
         
         for session, owner, seat_id in reservas:
             # La misma lógica del frontend en Python
-            fila = math.ceil(seat_id / 10)
-            pos_in_row = (seat_id - 1) % 10
+            fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
+            pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
             
-            if pos_in_row < 5:
+            if pos_in_row < (ASIENTOS_POR_FILA / 2):
                 butaca = (pos_in_row * 2) + 1
             else:
-                butaca = ((pos_in_row - 5) * 2) + 2
+                butaca = int((pos_in_row - (ASIENTOS_POR_FILA / 2)) * 2) + 2
                 
             writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
 
