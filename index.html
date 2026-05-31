@@ -86,7 +86,7 @@
             conectarWebSocket(nombre, apellido);
         }
 
-function conectarWebSocket(nombre, apellido) {
+        function conectarWebSocket(nombre, apellido) {
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             const wsUrl = `${protocol}://${window.location.host}/ws/${clientId}?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}`;
             
@@ -124,8 +124,8 @@ function conectarWebSocket(nombre, apellido) {
             const container = document.getElementById("sessions-container");
             container.innerHTML = ""; 
             
-            // Calculamos cuántos asientos tiene ya este cliente en total
-            const mySeatsCount = seats.filter(seat => seat.owner_id === clientId).length;
+            // Calculamos butacas basándonos en el nuevo campo seguro
+            const mySeatsCount = seats.filter(seat => seat.is_mine).length;
 
             const sesiones = ['11h', '12:45h', '18h'];
             const asientosPorSesion = {};
@@ -147,20 +147,20 @@ function conectarWebSocket(nombre, apellido) {
                     const btn = document.createElement("button");
                     btn.innerText = seat.seat_number;
                     
+                    // Nueva asignación visual
                     if (seat.status === "free") {
                         btn.className = "seat free";
-                    } else if (seat.status === "reserved" && seat.owner_id === clientId) {
+                    } else if (seat.status === "reserved" && seat.is_mine) {
                         btn.className = "seat my-seat"; 
                     } else {
                         btn.className = "seat reserved"; 
                     }
 
                     btn.onclick = () => {
-                        // Si está libre, validamos el límite localmente
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
                                 alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
-                                return; // Detenemos la ejecución, no se envía nada al servidor
+                                return; 
                             }
                             ws.send(JSON.stringify({ 
                                 action: "toggle", 
@@ -168,8 +168,8 @@ function conectarWebSocket(nombre, apellido) {
                                 session_time: sesion
                             }));
                         } 
-                        // Siempre permitimos deseleccionar un asiento propio
-                        else if (seat.owner_id === clientId) {
+                        // Permitimos deseleccionar usando el nuevo campo
+                        else if (seat.is_mine) {
                             ws.send(JSON.stringify({ 
                                 action: "toggle", 
                                 seat_number: seat.seat_number,

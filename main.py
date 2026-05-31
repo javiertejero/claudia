@@ -50,12 +50,30 @@ async def get_all_seats():
             rows = await cursor.fetchall()
             return [{"seat_number": r["seat_number"], "session_time": r["session_time"], "status": r["status"], "owner_id": r["owner_id"]} for r in rows]
 
+
+def sanitize_seats(seats: list[dict], client_id: str):
+    sanitized_seats = [
+        {
+            "seat_number": s["seat_number"],
+            "session_time": s["session_time"],
+            "status": s["status"],
+            "is_mine": s["owner_id"] == client_id # Solo enviamos true o false
+        }
+        for s in seats
+    ]
+    return sanitized_seats
+
+
 async def broadcast_seats():
     seats = await get_all_seats()
-    message = json.dumps({"type": "seats_update", "seats": seats})
+    
+    # Iteramos sobre los usuarios activos y enviamos una lista de asientos limpia
     for client_id in list(active_users):
         if client_id in active_connections:
+            sanitized_seats = sanitize_seats(seats, client_id)
+            message = json.dumps({"type": "seats_update", "seats": sanitized_seats})
             await active_connections[client_id].send_text(message)
+
 
 async def process_queue():
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
@@ -86,7 +104,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
         active_users.add(client_id)
         await websocket.send_text(json.dumps({"type": "status", "status": "active"}))
         seats = await get_all_seats()
-        await websocket.send_text(json.dumps({"type": "seats_update", "seats": seats}))
+        sanitized_seats = sanitize_seats(seats, client_id)
+        await websocket.send_text(json.dumps({"type": "seats_update", "seats": sanitized_seats}))
     else:
         if client_id not in waiting_queue and client_id not in active_users:
             waiting_queue.append(client_id)

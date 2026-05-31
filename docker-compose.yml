@@ -4,6 +4,7 @@ services:
     container_name: reservas_app
     restart: always
     volumes:
+      - .:/app
       # Mapeamos una carpeta local 'data' al contenedor para que la base de datos sea persistente
       - ./data:/app/data
 
@@ -12,7 +13,7 @@ services:
     container_name: reservas_proxy
     restart: always
     ports:
-      - "80:80"
+      - "80:8000"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
