@@ -24,12 +24,10 @@
         
         .grid { 
             display: grid; 
-            /* 1 columna adaptable para la 'Fila', ASIENTOS_POR_FILA fracciones iguales para asientos */
-            grid-template-columns: max-content repeat(20, 1fr); 
             gap: 8px; 
-            max-width: 550px; 
+            max-width: 800px; /* Ampliado un poco para que quepan bien los 20 asientos */
             margin: 0 auto 1.5rem auto; 
-            align-items: center; /* Centra el texto F1 verticalmente */
+            align-items: center; 
         }
         .row-header {
             font-weight: bold;
@@ -37,6 +35,9 @@
             font-size: 0.9rem;
             text-align: right;
             padding-right: 5px;
+        }
+        .pasillo {
+            width: 100%; /* El div invisible que hará de pasillo */
         }
         .seat { padding: 12px 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; border: none; transition: background 0.1s; }
         
@@ -87,6 +88,7 @@
 
     <script>
         const ASIENTOS_POR_FILA = 20;
+        const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
         let clientId = localStorage.getItem("clientId");
         if (!clientId) {
@@ -190,13 +192,27 @@
                 title.innerText = `Sesión ${sesion}`;
                 block.appendChild(title);
 
+                // 1. EL ESCENARIO VA ARRIBA DEL TODO (Antes del Grid)
+                const escenario = document.createElement("div");
+                escenario.className = "escenario";
+                escenario.innerText = "ESCENARIO";
+                escenario.style.marginBottom = "20px"; // Un poco de aire con la Fila 1
+                block.appendChild(escenario);
+
                 const grid = document.createElement("div");
                 grid.className = "grid";
                 
+                // 2. CONFIGURACIÓN DINÁMICA DEL GRID (Header + Mitad + Pasillo + Mitad)
+                // Usamos 30px fijos para el pasillo central
+                grid.style.gridTemplateColumns = `max-content repeat(${mitad}, 1fr) 30px repeat(${mitad}, 1fr)`;
+
                 let rowCounter = 1;
+
                 asientosPorSesion[sesion].forEach((seat, index) => {
-                    // 1. Inyectar la cabecera de fila al principio de cada bloque de ASIENTOS_POR_FILA
-                    if (index % ASIENTOS_POR_FILA === 0) {
+                    const posInRow = index % ASIENTOS_POR_FILA;
+
+                    // Cabecera de fila
+                    if (posInRow === 0) {
                         const rowHeader = document.createElement("div");
                         rowHeader.className = "row-header";
                         rowHeader.innerText = `F${rowCounter}`;
@@ -204,15 +220,21 @@
                         rowCounter++;
                     }
 
-                    // 2. Calcular el número visual de la butaca
-                    const posInRow = index % ASIENTOS_POR_FILA;
-                    // Si está en la primera mitad, es impar. Si está en la segunda, es par.
-                    const theatreSeatNum = posInRow < (ASIENTOS_POR_FILA / 2) ? (posInRow * 2) + 1 : ((posInRow - (ASIENTOS_POR_FILA / 2)) * 2) + 2;
+                    // 3. INYECCIÓN DEL PASILLO
+                    if (posInRow === mitad) {
+                        const spacer = document.createElement("div");
+                        spacer.className = "pasillo";
+                        grid.appendChild(spacer);
+                    }
+
+                    // 4. CÁLCULO DE NÚMERO DE BUTACA CON LA CONSTANTE
+                    const theatreSeatNum = posInRow < mitad 
+                        ? (posInRow * 2) + 1 
+                        : ((posInRow - mitad) * 2) + 2;
 
                     const btn = document.createElement("button");
                     btn.innerText = theatreSeatNum;
                     
-                    // Asignación de colores
                     if (seat.status === "free") {
                         btn.className = "seat free";
                     } else if (seat.status === "reserved" && seat.is_mine) {
@@ -224,8 +246,7 @@
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
-                                // Con el semáforo de contador no es necesario "levantar" alert...
-                                console.log("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
                                 return; 
                             }
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
@@ -235,14 +256,7 @@
                     };
                     grid.appendChild(btn);
                 });
-
                 block.appendChild(grid);
-
-                const escenario = document.createElement("div");
-                escenario.className = "escenario";
-                escenario.innerText = "ESCENARIO";
-                block.appendChild(escenario);
-
                 container.appendChild(block);
             });
         }
