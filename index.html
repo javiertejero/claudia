@@ -227,10 +227,10 @@
                         grid.appendChild(spacer);
                     }
 
-                    // 4. CÁLCULO DE NÚMERO DE BUTACA CON LA CONSTANTE
+                    // 4. CÁLCULO DE NÚMERO DE BUTACA (Estándar de Teatro)
                     const theatreSeatNum = posInRow < mitad 
-                        ? (posInRow * 2) + 1 
-                        : ((posInRow - mitad) * 2) + 2;
+                        ? ((mitad - 1 - posInRow) * 2) + 1  // Izquierda (Impares): El 1 pegado al pasillo, crece hacia afuera
+                        : ((posInRow - mitad) * 2) + 2;     // Derecha (Pares): El 2 pegado al pasillo, crece hacia afuera
 
                     const btn = document.createElement("button");
                     btn.innerText = theatreSeatNum;

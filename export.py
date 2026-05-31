@@ -30,8 +30,9 @@ def exportar_csv():
             fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
             pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
             
+            # La misma lógica del estándar de teatro
             if pos_in_row < mitad:
-                butaca = (pos_in_row * 2) + 1
+                butaca = ((mitad - 1 - pos_in_row) * 2) + 1
             else:
                 butaca = ((pos_in_row - mitad) * 2) + 2
                 
