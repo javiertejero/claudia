@@ -83,10 +83,20 @@
     </div>
 
     <div id="seat-counter">
-        Butacas reservadas: <span id="seat-count">0</span>/6
+        <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/6</div>
+        
+        <div id="action-buttons" style="display: none; gap: 5px; flex-direction: column;">
+            <button onclick="copiarReservas()" style="cursor: pointer; padding: 5px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
+                📋 Copiar
+            </button>
+            <button onclick="compartirWhatsApp()" style="cursor: pointer; padding: 5px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
+                💬 Enviar por WhatsApp
+            </button>
+        </div>
     </div>
 
     <script>
+        let textoReservasFormateado = "";
         const ASIENTOS_POR_FILA = 20;
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
@@ -164,19 +174,46 @@
             const container = document.getElementById("sessions-container");
             container.innerHTML = ""; 
             
-            // Calculamos butacas basándonos en el nuevo campo seguro
-            const mySeatsCount = seats.filter(seat => seat.is_mine).length;
 
-            // Actualizar contador flotante
+            // 1. Calculamos butacas y preparamos el resumen de texto
+            const mySeats = seats.filter(seat => seat.is_mine);
+            const mySeatsCount = mySeats.length;
+
+            if (mySeatsCount > 0) {
+                const nombreCompleto = localStorage.getItem("nombre") + " " + localStorage.getItem("apellido");
+                let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
+                
+                // Ordenar por sesión y luego por número de asiento
+                mySeats.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.seat_number - b.seat_number);
+
+                mySeats.forEach(seat => {
+                    const mitad = ASIENTOS_POR_FILA / 2;
+                    const fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
+                    const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+                    
+                    const butaca = posInRow < mitad 
+                        ? ((mitad - 1 - posInRow) * 2) + 1 
+                        : ((posInRow - mitad) * 2) + 2;
+
+                    resumen += `• Sesión ${seat.session_time}: Fila ${fila}, Butaca ${butaca}\n`;
+                });
+                textoReservasFormateado = resumen;
+                document.getElementById("action-buttons").style.display = "flex";
+            } else {
+                textoReservasFormateado = "";
+                document.getElementById("action-buttons").style.display = "none";
+            }
+
+            // 2. ACTUALIZAR CONTADOR FLOTANTE (Colores)
             const counterDiv = document.getElementById("seat-counter");
             document.getElementById("seat-count").innerText = mySeatsCount;
-
+            
             if (mySeatsCount >= 6) {
-                counterDiv.style.background = "#ef4444"; // Rojo (Límite alcanzado)
+                counterDiv.style.background = "#ef4444"; 
             } else if (mySeatsCount > 0) {
-                counterDiv.style.background = "#22c55e"; // Verde (Tienes reservas)
+                counterDiv.style.background = "#22c55e"; 
             } else {
-                counterDiv.style.background = "#1e293b"; // Gris (Cero reservas)
+                counterDiv.style.background = "#1e293b"; 
             }
 
             const sesiones = ['11h', '12:45h', '18h'];
@@ -259,6 +296,28 @@
                 block.appendChild(grid);
                 container.appendChild(block);
             });
+        }
+        function copiarReservas() {
+            if (!textoReservasFormateado) return;
+            
+            // API nativa del navegador para copiar al portapapeles
+            navigator.clipboard.writeText(textoReservasFormateado).then(() => {
+                // Feedback visual rápido
+                const btn = document.querySelector("button[onclick='copiarReservas()']");
+                const textoOriginal = btn.innerText;
+                btn.innerText = "✅ ¡Copiado!";
+                setTimeout(() => btn.innerText = textoOriginal, 2000);
+            }).catch(err => {
+                alert("No se pudo copiar automáticamente. Por favor, revisa tus permisos.");
+            });
+        }
+
+        function compartirWhatsApp() {
+            if (!textoReservasFormateado) return;
+            
+            // Genera un enlace a WhatsApp con el texto pre-rellenado (URL encodeado)
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoReservasFormateado)}`;
+            window.open(url, '_blank');
         }
     </script>
 </body>
