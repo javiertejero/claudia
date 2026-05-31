@@ -11,3 +11,5 @@ wheels/
 
 # Project artifacts
 reservas.db
+.env
+reservas_espectaculo.csv

@@ -7,7 +7,8 @@ services:
       - .:/app
       # Mapeamos una carpeta local 'data' al contenedor para que la base de datos sea persistente
       - ./data:/app/data
-
+    env_file: .env
+    
   caddy:
     image: caddy:latest
     container_name: reservas_proxy
