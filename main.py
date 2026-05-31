@@ -19,7 +19,7 @@ SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
 active_user_tasks = {} # Para guardar el cronómetro de cada usuario
 
 ADMIN_SECRET = os.getenv('CLAUDIA_SECRET', str(uuid.uuid4()))
-logger.info("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
+logger.debug("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
 admin_connections = set()
 
 
