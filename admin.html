@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Danza</title>
     <style>
-        body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
+body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
         .status-dot { display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 5px; }
         
@@ -14,10 +14,31 @@
         .stat-card h3 { margin: 0 0 0.5rem 0; color: #64748b; font-size: 1rem; }
         .stat-card .number { font-size: 2rem; font-weight: bold; color: #0f172a; }
         
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        /* Contenedor de la tabla para permitir scroll en móvil */
+        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        table { width: 100%; border-collapse: collapse; min-width: 600px; /* Evita que las columnas se aplasten */ }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         th { background: #f1f5f9; font-weight: bold; color: #475569; }
         tr:hover { background: #f8fafc; }
+
+        /* --- ADAPTACIÓN MÓVIL --- */
+        @media (max-width: 768px) {
+            body { padding: 1rem; } /* Menos margen lateral en móvil */
+            
+            .header { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                gap: 15px; 
+            }
+            
+            .stats-container { 
+                flex-direction: column; /* Apila las 3 tarjetas de sesiones */
+                gap: 0.8rem;
+            }
+            
+            .stat-card { padding: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -45,19 +66,21 @@
     <div class="stats-container" id="stats">
         </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Sesión</th>
-                <th>Nombre</th>
-                <th>Fila</th>
-                <th>Butaca</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Sesión</th>
+                    <th>Nombre</th>
+                    <th>Fila</th>
+                    <th>Butaca</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
 
     <script>
         const ASIENTOS_POR_FILA = 20;
