@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Danza</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
+        .status-dot { display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 5px; }
+        
+        .stats-container { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1; text-align: center; }
+        .stat-card h3 { margin: 0 0 0.5rem 0; color: #64748b; font-size: 1rem; }
+        .stat-card .number { font-size: 2rem; font-weight: bold; color: #0f172a; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; font-weight: bold; color: #475569; }
+        tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Control de Aforo</h1>
+        <div><span class="status-dot"></span> En vivo</div>
+    </div>
+
+    <div class="stats-container" id="stats">
+        </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sesión</th>
+                <th>Nombre</th>
+                <th>Fila</th>
+                <th>Butaca</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
+
+    <script>
+        const ASIENTOS_POR_FILA = 20;
+        
+        // Extraemos el secreto de la URL actual (ej: /admin/550e8400-...)
+        const secret = window.location.pathname.split("/").pop();
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
+        
+        const ws = new WebSocket(wsUrl);
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === "admin_update") {
+                renderDashboard(data.seats);
+            }
+        };
+
+        function renderDashboard(seats) {
+            const sesiones = ['11h', '12:45h', '18h'];
+            const tbody = document.getElementById("table-body");
+            const stats = document.getElementById("stats");
+            
+            tbody.innerHTML = "";
+            stats.innerHTML = "";
+
+            // 1. Renderizar tarjetas de estadísticas
+            sesiones.forEach(sesion => {
+                const asientosSesion = seats.filter(s => s.session_time === sesion);
+                const reservados = asientosSesion.filter(s => s.status === 'reserved').length;
+                const totales = asientosSesion.length;
+                
+                stats.innerHTML += `
+                    <div class="stat-card">
+                        <h3>Sesión ${sesion}</h3>
+                        <div class="number">${reservados} / ${totales}</div>
+                    </div>
+                `;
+            });
+
+            // 2. Renderizar tabla de reservas (solo asientos ocupados)
+            const ocupados = seats.filter(s => s.status === 'reserved');
+            
+            // Ordenar por sesión y nombre para agrupar las reservas de la misma persona
+            ocupados.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.owner_name.localeCompare(b.owner_name));
+
+            ocupados.forEach(seat => {
+                // Cálculo de teatro
+                const mitad = ASIENTOS_POR_FILA / 2;
+                const fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
+                const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+                
+                const butaca = posInRow < mitad 
+                    ? ((mitad - 1 - posInRow) * 2) + 1 
+                    : ((posInRow - mitad) * 2) + 2;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>${seat.session_time}</strong></td>
+                    <td>${seat.owner_name}</td>
+                    <td>Fila ${fila}</td>
+                    <td>${butaca}</td>
+                    <td style="color: #22c55e; font-weight: bold;">Confirmada</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

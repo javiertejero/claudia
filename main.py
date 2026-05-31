@@ -1,15 +1,24 @@
 import html
+import os
 import logging
 import json
+import uuid
 from contextlib import asynccontextmanager
 import aiosqlite
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
+logging.basicConfig(level=logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
+
+ADMIN_SECRET = os.getenv('CLAUDIA_SECRET', str(uuid.uuid4()))
+logger.info("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
+admin_connections = set()
+
 
 # Estado en memoria
 active_connections = {}  # {client_id: websocket}
@@ -52,10 +61,9 @@ app = FastAPI(lifespan=lifespan)
 async def get_all_seats():
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute('SELECT seat_number, session_time, status, owner_id FROM seats') as cursor:
+        async with db.execute('SELECT seat_number, session_time, status, owner_id, owner_name FROM seats') as cursor:
             rows = await cursor.fetchall()
-            return [{"seat_number": r["seat_number"], "session_time": r["session_time"], "status": r["status"], "owner_id": r["owner_id"]} for r in rows]
-
+            return [dict(r) for r in rows] # Convertimos la fila a diccionario completo
 
 def sanitize_seats(seats: list[dict], client_id: str):
     sanitized_seats = [
@@ -73,13 +81,18 @@ def sanitize_seats(seats: list[dict], client_id: str):
 async def broadcast_seats():
     seats = await get_all_seats()
     
-    # Iteramos sobre los usuarios activos y enviamos una lista de asientos limpia
+    # 1. Enviar a usuarios normales (sanitizado)
     for client_id in list(active_users):
         if client_id in active_connections:
             sanitized_seats = sanitize_seats(seats, client_id)
             message = json.dumps({"type": "seats_update", "seats": sanitized_seats})
             await active_connections[client_id].send_text(message)
-
+            
+    # 2. Enviar a administradores (datos completos en tiempo real)
+    if admin_connections:
+        admin_message = json.dumps({"type": "admin_update", "seats": seats})
+        for admin_ws in list(admin_connections):
+            await admin_ws.send_text(admin_message)
 
 async def process_queue():
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
@@ -185,3 +198,30 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
         if client_id in waiting_queue:
             waiting_queue.remove(client_id)
         await process_queue()
+
+@app.get("/admin/{secret}")
+async def get_admin_panel(secret: str):
+    if secret != ADMIN_SECRET:
+        return {"error": "No autorizado"} # Podrías devolver un 404 para disimular
+    return FileResponse("admin.html")
+
+@app.websocket("/ws/admin/{secret}")
+async def admin_websocket(websocket: WebSocket, secret: str):
+    if secret != ADMIN_SECRET:
+        await websocket.close()
+        return
+        
+    await websocket.accept()
+    admin_connections.add(websocket)
+    
+    try:
+        # Enviar el estado actual nada más conectar
+        seats = await get_all_seats()
+        await websocket.send_text(json.dumps({"type": "admin_update", "seats": seats}))
+        
+        while True:
+            # Mantenemos la conexión viva
+            await websocket.receive_text()
+            
+    except WebSocketDisconnect:
+        admin_connections.remove(websocket)
