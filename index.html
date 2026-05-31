@@ -32,6 +32,22 @@
         .my-seat:hover { background: #16a34a; }
 
         .escenario { max-width: 400px; margin: 0 auto; padding: 15px; background: #334155; color: white; font-weight: bold; border-radius: 4px; letter-spacing: 2px; }
+
+        /* Contador flotante */
+        #seat-counter {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1e293b; /* Gris oscuro por defecto */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: background 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -48,6 +64,10 @@
         <div id="status-banner" class="queued">Conectando al servidor...</div>
         
         <div id="sessions-container" style="display: none;"></div>
+    </div>
+
+    <div id="seat-counter">
+        Butacas reservadas: <span id="seat-count">0</span>/6
     </div>
 
     <script>
@@ -102,10 +122,12 @@
                         banner.className = "queued";
                         banner.innerText = `Estás en la cola. Posición: ${data.position}`;
                         container.style.display = "none";
+                        document.getElementById("seat-counter").style.display = "none"; // Ocultar contador de butacas reservadas cuando estás en cola
                     } else if (data.status === "active") {
                         banner.className = "active";
                         banner.innerText = "¡Es tu turno! Selecciona tus butacas.";
                         container.style.display = "block";
+                        document.getElementById("seat-counter").style.display = "block"; // Mostrar contador de butacas reservadas
                     }
                 }
 
@@ -126,6 +148,18 @@
             
             // Calculamos butacas basándonos en el nuevo campo seguro
             const mySeatsCount = seats.filter(seat => seat.is_mine).length;
+
+            // Actualizar contador flotante
+            const counterDiv = document.getElementById("seat-counter");
+            document.getElementById("seat-count").innerText = mySeatsCount;
+
+            if (mySeatsCount >= 6) {
+                counterDiv.style.background = "#ef4444"; // Rojo (Límite alcanzado)
+            } else if (mySeatsCount > 0) {
+                counterDiv.style.background = "#22c55e"; // Verde (Tienes reservas)
+            } else {
+                counterDiv.style.background = "#1e293b"; // Gris (Cero reservas)
+            }
 
             const sesiones = ['11h', '12:45h', '18h'];
             const asientosPorSesion = {};
@@ -159,7 +193,8 @@
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
-                                alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                // Con el semáforo de contador no es necesario "levantar" alert...
+                                // alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
                                 return; 
                             }
                             ws.send(JSON.stringify({ 
