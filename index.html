@@ -85,18 +85,23 @@
     <div id="seat-counter">
         <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/6</div>
         
-        <div id="action-buttons" style="display: none; gap: 5px; flex-direction: column;">
-            <button onclick="copiarReservas()" style="cursor: pointer; padding: 5px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
+        <div id="action-buttons" style="display: none; gap: 8px; flex-direction: column;">
+            <button onclick="copiarReservas()" style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
                 📋 Copiar
             </button>
-            <button onclick="compartirWhatsApp()" style="cursor: pointer; padding: 5px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
-                💬 Enviar por WhatsApp
+            <button onclick="compartirWhatsApp()" style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
+                💬 Enviar a WhatsApp
+            </button>
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
+            <button onclick="finalizarReserva()" style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
+                ✅ Finalizar Reserva
             </button>
         </div>
     </div>
 
     <script>
         let textoReservasFormateado = "";
+        let timerInterval;
         const ASIENTOS_POR_FILA = 20;
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
@@ -152,10 +157,15 @@
                         container.style.display = "none";
                         document.getElementById("seat-counter").style.display = "none"; // Ocultar contador de butacas reservadas cuando estás en cola
                     } else if (data.status === "active") {
+                        const banner = document.getElementById("status-banner");
                         banner.className = "active";
-                        banner.innerText = "¡Es tu turno! Selecciona tus butacas.";
-                        container.style.display = "block";
-                        document.getElementById("seat-counter").style.display = "block"; // Mostrar contador de butacas reservadas
+                        // Inyectamos el reloj visualmente en el banner
+                        banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+                        document.getElementById("sessions-container").style.display = "block";
+                        document.getElementById("seat-counter").style.display = "block";
+                        
+                        // Iniciamos el reloj visual leyendo el dato del servidor
+                        iniciarTemporizador(data.timeout);
                     }
                 }
 
@@ -166,6 +176,18 @@
                 // Manejador para el mensaje de error del backend
                 if (data.type === "error") {
                     alert(data.message);
+                }
+
+                if (data.type === "timeout") {
+                    clearInterval(timerInterval);
+                    document.getElementById("app-screen").innerHTML = `
+                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
+                            <p>${data.message}</p>
+                            <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1.5rem;">Volver a intentar</button>
+                        </div>
+                    `;
+                    if (ws) ws.close(); // Cerramos explícitamente en cliente
                 }
             };
         }
@@ -319,6 +341,41 @@
             const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoReservasFormateado)}`;
             window.open(url, '_blank');
         }
+
+        function iniciarTemporizador(segundos) {
+            clearInterval(timerInterval);
+            let tiempoRestante = segundos;
+            const display = document.getElementById("timer-display");
+            
+            timerInterval = setInterval(() => {
+                tiempoRestante--;
+                const min = String(Math.floor(tiempoRestante / 60)).padStart(2, '0');
+                const sec = String(tiempoRestante % 60).padStart(2, '0');
+                display.innerText = `⏱️ ${min}:${sec}`;
+                
+                if (tiempoRestante <= 0) {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        function finalizarReserva() {
+            if (!confirm("¿Seguro que has terminado? Saldrás de la sala y dejarás paso a la siguiente persona.")) return;
+            
+            // Cerrar el websocket desencadena toda la limpieza en el servidor al instante
+            if (ws) ws.close();
+            clearInterval(timerInterval);
+            
+            // Pantalla de agradecimiento
+            document.getElementById("app-screen").innerHTML = `
+                <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h2 style="color: #22c55e; margin-top: 0;">✅ ¡Reserva Guardada!</h2>
+                    <p>Tus butacas han quedado registradas correctamente en el sistema.</p>
+                    <p>Ya puedes cerrar esta ventana.</p>
+                </div>
+            `;
+        }
+
     </script>
 </body>
 </html>

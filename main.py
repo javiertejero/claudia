@@ -1,3 +1,4 @@
+import asyncio
 import html
 import os
 import logging
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
+SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
+active_user_tasks = {} # Para guardar el cronómetro de cada usuario
 
 ADMIN_SECRET = os.getenv('CLAUDIA_SECRET', str(uuid.uuid4()))
 logger.info("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
@@ -58,6 +61,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+async def expire_user_session(client_id: str):
+    """Espera el tiempo límite y expulsa al usuario si sigue conectado."""
+    try:
+        await asyncio.sleep(SESSION_TIMEOUT)
+        if client_id in active_connections:
+            # Le enviamos un mensaje especial antes de cortarle
+            await active_connections[client_id].send_text(json.dumps({
+                "type": "timeout",
+                "message": "Tiempo agotado. Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo."
+            }))
+            # Cortamos la conexión. Esto disparará automáticamente el bloque except WebSocketDisconnect
+            await active_connections[client_id].close()
+    except asyncio.CancelledError:
+        # Si el usuario cierra la pestaña antes de los 3 minutos, cancelamos esta tarea en silencio
+        pass
+
 async def get_all_seats():
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
@@ -98,9 +117,14 @@ async def process_queue():
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
         next_client = waiting_queue.pop(0)
         active_users.add(next_client)
+
+        # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
+        active_user_tasks[next_client] = asyncio.create_task(expire_user_session(next_client))
+
         if next_client in active_connections:
             ws = active_connections[next_client]
-            await ws.send_text(json.dumps({"type": "status", "status": "active"}))
+            # Pasamos el tiempo al cliente para que pinte su reloj
+            await ws.send_text(json.dumps({"type": "status", "status": "active", "timeout": SESSION_TIMEOUT}))
             await broadcast_seats()
             
     for i, client_id in enumerate(waiting_queue):
@@ -124,7 +148,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
 
     if len(active_users) < MAX_ACTIVE_USERS:
         active_users.add(client_id)
-        await websocket.send_text(json.dumps({"type": "status", "status": "active"}))
+        active_user_tasks[client_id] = asyncio.create_task(expire_user_session(client_id))
+        await websocket.send_text(json.dumps({"type": "status", "status": "active", "timeout": SESSION_TIMEOUT}))
         seats = await get_all_seats()
         sanitized_seats = sanitize_seats(seats, client_id)
         await websocket.send_text(json.dumps({"type": "seats_update", "seats": sanitized_seats}))
@@ -200,6 +225,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
             active_users.remove(client_id)
         if client_id in waiting_queue:
             waiting_queue.remove(client_id)
+            
+        # CANCELAR SU RELOJ SI SE VA ANTES DE TIEMPO
+        if client_id in active_user_tasks:
+            active_user_tasks[client_id].cancel()
+            del active_user_tasks[client_id]
+            
         await process_queue()
         await broadcast_admin_stats()
 
