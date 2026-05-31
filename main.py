@@ -7,6 +7,7 @@ import json
 import logging
 import math
 import os
+import time
 import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -21,6 +22,7 @@ DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
 SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
 active_user_tasks = {} # Para guardar el cronómetro de cada usuario
+active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
 
 ADMIN_SECRET = os.getenv('CLAUDIA_SECRET', str(uuid.uuid4()))
 logger.debug("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
@@ -65,20 +67,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
 async def expire_user_session(client_id: str):
     """Espera el tiempo límite y expulsa al usuario si sigue conectado."""
     try:
-        await asyncio.sleep(SESSION_TIMEOUT)
-        if client_id in active_connections:
-            # Le enviamos un mensaje especial antes de cortarle
-            await active_connections[client_id].send_text(json.dumps({
-                "type": "timeout",
-                "message": "Tiempo agotado. Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo."
-            }))
-            # Cortamos la conexión. Esto disparará automáticamente el bloque except WebSocketDisconnect
-            await active_connections[client_id].close()
+        # Calculamos cuánto tiempo real le queda
+        expires_at = active_user_expires.get(client_id, time.time() + SESSION_TIMEOUT)
+        remaining = expires_at - time.time()
+        
+        if remaining > 0:
+            await asyncio.sleep(remaining)
+            
+        # Al despertar, verificamos si realmente se ha agotado y sigue activo
+        if client_id in active_connections and client_id in active_users:
+            if time.time() >= active_user_expires.get(client_id, 0):
+                await active_connections[client_id].send_text(json.dumps({
+                    "type": "timeout",
+                    "message": "Tiempo agotado. Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo."
+                }))
+                await active_connections[client_id].close()
     except asyncio.CancelledError:
-        # Si el usuario cierra la pestaña antes de los 3 minutos, cancelamos esta tarea en silencio
         pass
 
 async def get_all_seats():
@@ -123,6 +131,7 @@ async def process_queue():
         active_users.add(next_client)
 
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
+        active_user_expires[next_client] = time.time() + SESSION_TIMEOUT
         active_user_tasks[next_client] = asyncio.create_task(expire_user_session(next_client))
 
         if next_client in active_connections:
@@ -145,12 +154,11 @@ async def get_index():
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str = "", apellido: str = ""):
     await websocket.accept()
-
-    # 1. LÓGICA MULTIPESTAÑA: Expulsar conexión antigua si existe
+    
+    # 1. EXPULSIÓN DE MULTIPESTAÑA
     if client_id in active_connections:
         old_ws = active_connections[client_id]
         try:
-            # Avisamos a la pestaña vieja
             await old_ws.send_text(json.dumps({
                 "type": "duplicate",
                 "message": "Has abierto la página en otra pestaña, esta ha quedado anulada. Disculpas."
@@ -160,22 +168,43 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
             pass
 
     active_connections[client_id] = websocket
-    nombre_limpio = html.escape(nombre[:50])     # Máximo 50 caracteres
+    
+    nombre_limpio = html.escape(nombre[:50])
     apellido_limpio = html.escape(apellido[:50])
     active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
 
-    if len(active_users) < MAX_ACTIVE_USERS:
-        active_users.add(client_id)
-        active_user_tasks[client_id] = asyncio.create_task(expire_user_session(client_id))
-        await websocket.send_text(json.dumps({"type": "status", "status": "active", "timeout": SESSION_TIMEOUT}))
+    # 2. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
+    if client_id in active_users:
+        # Si ya estaba activo, hereda el tiempo restante
+        remaining = int(active_user_expires.get(client_id, time.time() + SESSION_TIMEOUT) - time.time())
+        if remaining < 0:
+            remaining = 0
+            
+        await websocket.send_text(json.dumps({"type": "status", "status": "active", "timeout": remaining}))
         seats = await get_all_seats()
         sanitized_seats = sanitize_seats(seats, client_id)
         await websocket.send_text(json.dumps({"type": "seats_update", "seats": sanitized_seats}))
-    else:
-        if client_id not in waiting_queue and client_id not in active_users:
-            waiting_queue.append(client_id)
-        pos = waiting_queue.index(client_id) + 1 if client_id in waiting_queue else 0
+        
+    elif client_id in waiting_queue:
+        # Si ya estaba en la cola, le devolvemos su posición
+        pos = waiting_queue.index(client_id) + 1
         await websocket.send_text(json.dumps({"type": "status", "status": "queued", "position": pos}))
+        
+    else:
+        # Es un usuario completamente nuevo (o que recarga tras haber perdido el turno)
+        if len(active_users) < MAX_ACTIVE_USERS:
+            active_users.add(client_id)
+            active_user_expires[client_id] = time.time() + SESSION_TIMEOUT
+            active_user_tasks[client_id] = asyncio.create_task(expire_user_session(client_id))
+            
+            await websocket.send_text(json.dumps({"type": "status", "status": "active", "timeout": SESSION_TIMEOUT}))
+            seats = await get_all_seats()
+            sanitized_seats = sanitize_seats(seats, client_id)
+            await websocket.send_text(json.dumps({"type": "seats_update", "seats": sanitized_seats}))
+        else:
+            waiting_queue.append(client_id)
+            pos = len(waiting_queue)
+            await websocket.send_text(json.dumps({"type": "status", "status": "queued", "position": pos}))
 
     await broadcast_admin_stats()
 
