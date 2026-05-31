@@ -174,7 +174,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
                 # Usamos .get() y validamos el tipo para evitar excepciones
                 seat_num = payload.get("seat_number")
                 sess_time = payload.get("session_time")
-                if not isinstance(seat_num, int) or not isinstance(sess_time, str):
+                if not isinstance(seat_num, int) or not isinstance(sess_time, str) or sess_time not in ["11h", "12:45h", "18h"]:
                     logger.warning("Invalid seat_num (%s) or sess_time (%s)", seat_num, sess_time)
                     continue # Ignoramos cargas útiles manipuladas
                 user_full_name = active_users_names.get(client_id, "Desconocido")
