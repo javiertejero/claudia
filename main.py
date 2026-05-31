@@ -149,27 +149,27 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
                             WHERE seat_number = ? AND session_time = ? AND status = "free"
                         ''', (client_id, user_full_name, seat_num, sess_time))
                         
-                        # Si affected_rows (rowcount) es 0, significa que o no estaba libre (condición de carrera ganada por otro) o no existe
+                        # Si no pudo reservar (no estaba libre), vemos si intentaba liberar uno suyo
                         if cursor.rowcount == 0:
-                            # Comprobamos si el usuario está intentando liberar un asiento que ya era suyo
                             await db.execute('''
                                 UPDATE seats 
                                 SET status = "free", owner_id = NULL, owner_name = NULL 
                                 WHERE seat_number = ? AND session_time = ? AND owner_id = ?
                             ''', (seat_num, sess_time, client_id))
                     else:
-                        # Si ya tiene 6, SOLO le dejamos liberar los suyos
-                        await db.execute('''
+                        # Si ya tiene 6, intentamos liberar el asiento (solo funcionará si es suyo)
+                        cursor = await db.execute('''
                             UPDATE seats 
                             SET status = "free", owner_id = NULL, owner_name = NULL 
                             WHERE seat_number = ? AND session_time = ? AND owner_id = ?
                         ''', (seat_num, sess_time, client_id))
                         
-                        # Y le enviamos el aviso
-                        await websocket.send_text(json.dumps({
-                            "type": "error",
-                            "message": "Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento..."
-                        }))
+                        # Si rowcount es 0, el asiento no era suyo. Estaba intentando coger el 7º.
+                        if cursor.rowcount == 0:
+                            await websocket.send_text(json.dumps({
+                                "type": "error",
+                                "message": "Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento..."
+                            }))
 
                     await db.commit()
                 # Refrescamos la vista para todos los usuarios activos
