@@ -22,7 +22,22 @@
         .session-block { margin-bottom: 4rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .session-title { margin-top: 0; color: #333; }
         
-        .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; max-width: 500px; margin: 0 auto 1.5rem auto; }
+        .grid { 
+            display: grid; 
+            /* 1 columna adaptable para la 'Fila', 10 fracciones iguales para asientos */
+            grid-template-columns: max-content repeat(10, 1fr); 
+            gap: 8px; 
+            max-width: 550px; 
+            margin: 0 auto 1.5rem auto; 
+            align-items: center; /* Centra el texto F1 verticalmente */
+        }
+        .row-header {
+            font-weight: bold;
+            color: #475569;
+            font-size: 0.9rem;
+            text-align: right;
+            padding-right: 5px;
+        }
         .seat { padding: 12px 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; border: none; transition: background 0.1s; }
         
         .free { background: #e2e8f0; color: #475569; }
@@ -176,12 +191,27 @@
 
                 const grid = document.createElement("div");
                 grid.className = "grid";
+                
+                let rowCounter = 1;
+                asientosPorSesion[sesion].forEach((seat, index) => {
+                    // 1. Inyectar la cabecera de fila al principio de cada bloque de 10
+                    if (index % 10 === 0) {
+                        const rowHeader = document.createElement("div");
+                        rowHeader.className = "row-header";
+                        rowHeader.innerText = `F${rowCounter}`;
+                        grid.appendChild(rowHeader);
+                        rowCounter++;
+                    }
 
-                asientosPorSesion[sesion].forEach(seat => {
+                    // 2. Calcular el número visual de la butaca
+                    const posInRow = index % 10;
+                    // Si está en la primera mitad (0-4), es impar. Si está en la segunda (5-9), es par.
+                    const theatreSeatNum = posInRow < 5 ? (posInRow * 2) + 1 : ((posInRow - 5) * 2) + 2;
+
                     const btn = document.createElement("button");
-                    btn.innerText = seat.seat_number;
+                    btn.innerText = theatreSeatNum;
                     
-                    // Nueva asignación visual
+                    // Asignación de colores
                     if (seat.status === "free") {
                         btn.className = "seat free";
                     } else if (seat.status === "reserved" && seat.is_mine) {
@@ -194,22 +224,12 @@
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
                                 // Con el semáforo de contador no es necesario "levantar" alert...
-                                // alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                console.log("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
                                 return; 
                             }
-                            ws.send(JSON.stringify({ 
-                                action: "toggle", 
-                                seat_number: seat.seat_number,
-                                session_time: sesion
-                            }));
-                        } 
-                        // Permitimos deseleccionar usando el nuevo campo
-                        else if (seat.is_mine) {
-                            ws.send(JSON.stringify({ 
-                                action: "toggle", 
-                                seat_number: seat.seat_number,
-                                session_time: sesion
-                            }));
+                            ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
+                        } else if (seat.is_mine) {
+                            ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
                         }
                     };
                     grid.appendChild(btn);
