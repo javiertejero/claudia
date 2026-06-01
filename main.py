@@ -186,9 +186,16 @@ async def get_index():
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(
-    websocket: WebSocket, client_id: str, nombre: str = "", apellido: str = ""
+    websocket: WebSocket,
+    client_id: str,
+    nombre: str = "",
+    apellido: str = "",
+    secret: str = "", 
 ):
     await websocket.accept()
+
+    # Comprobamos si tiene el pase VIP
+    is_privileged = (secret == ADMIN_SECRET)
 
     # 1. EXPULSIÓN DE MULTIPESTAÑA
     if client_id in active_connections:
@@ -210,8 +217,12 @@ async def websocket_endpoint(
 
     nombre_limpio = html.escape(nombre[:50])
     apellido_limpio = html.escape(apellido[:50])
-    active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
-
+    # Distinguimos visualmente en el admin quién viene de la taquilla
+    if is_privileged:
+        active_users_names[client_id] = f"[TAQ] {nombre_limpio} {apellido_limpio}".strip()
+    else:
+        active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
+        
     # 2. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
     if client_id in active_users:
         # Si ya estaba activo, hereda el tiempo restante

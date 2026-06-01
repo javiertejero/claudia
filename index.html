@@ -124,6 +124,25 @@
     </div>
 
     <script>
+        // 1. Detección del Modo Dios
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminSecret = urlParams.get('taquilla');
+        const isTaquilla = !!adminSecret;
+
+        // 2. Modificación visual y amnesia de datos
+        document.addEventListener("DOMContentLoaded", () => {
+            if (isTaquilla) {
+                const header = document.querySelector("#login-screen h2");
+                header.innerHTML = "🎫 MODO TAQUILLA";
+                header.style.color = "#d97706";
+                document.getElementById("nombre").value = "";
+                document.getElementById("apellido").value = "";
+            } else {
+                document.getElementById("nombre").value = localStorage.getItem("nombre") || "";
+                document.getElementById("apellido").value = localStorage.getItem("apellido") || "";
+            }
+        });
+
         let textoReservasFormateado = "";
         let timerInterval;
         let wakeLock = null;
@@ -133,10 +152,6 @@
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
         let clientId = localStorage.getItem("clientId");
-        if (!clientId) {
-            clientId = crypto.randomUUID();
-            localStorage.setItem("clientId", clientId);
-        }
 
         // Función para solicitar el bloqueo de pantalla
         async function solicitarWakeLock() {
@@ -205,6 +220,11 @@
             localStorage.setItem("nombre", nombre);
             localStorage.setItem("apellido", apellido);
 
+            if (!isTaquilla) {
+                localStorage.setItem("nombre", nombre);
+                localStorage.setItem("apellido", apellido);
+            }
+
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("app-screen").style.display = "block";
             
@@ -230,9 +250,24 @@
         }
 
         function conectarWebSocket(nombre, apellido) {
+            // Generación forzada de ID único en cada persona para la Taquilla
+            if (isTaquilla) {
+                clientId = "taq-" + Math.random().toString(36).substr(2, 9);
+            } else {
+                clientId = localStorage.getItem("clientId");
+                if (!clientId) {
+                    clientId = "client-" + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem("clientId", clientId);
+                }
+            }
+
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-            const wsUrl = `${protocol}://${window.location.host}/ws/${clientId}?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}`;
-            
+            let wsUrl = `${protocol}://${window.location.host}/ws/${clientId}?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}`;
+
+            // Añadimos la llave maestra si existe
+            if (isTaquilla) {
+                wsUrl += `&secret=${encodeURIComponent(adminSecret)}`;
+            }
             ws = new WebSocket(wsUrl);
             const banner = document.getElementById("status-banner");
             const container = document.getElementById("sessions-container");
@@ -535,12 +570,16 @@ function renderizarSesiones(seats) {
 
             document.getElementById("finalizar").style.display = "none";
 
+            const footerTaq = isTaquilla 
+                ? `<button onclick="window.location.reload()" style="margin-top: 1.5rem; background: #d97706; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Siguiente Espectador ➔</button>`
+                : `<p>Ya puedes cerrar esta ventana.</p>`;
+
             // Pantalla de agradecimiento
             document.getElementById("app-screen").innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <h2 style="color: #22c55e; margin-top: 0;">✅ ¡Reserva Guardada!</h2>
                     <p>Tus butacas han quedado registradas correctamente en el sistema.</p>
-                    <p>Ya puedes cerrar esta ventana.</p>
+                    ${footerTaq}
                 </div>
             `;
         }

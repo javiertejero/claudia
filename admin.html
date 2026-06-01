@@ -57,7 +57,11 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
             </div>
         </div>
         
-        <div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="abrirTaquilla()" style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                🎫 Taquilla (Saltar Cola)
+            </button>
+            
             <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
                 ⚠️ Borrar Base de Datos
             </button>
@@ -185,6 +189,12 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
                     }, 2000);
                 }
             }
+        }
+
+        function abrirTaquilla() {
+            localStorage.clear() // limipieza de previos usuario/nombre, etc.
+            // Abre una nueva pestaña hacia el index público pero inyectando el secreto
+            window.open(`/?taquilla=${secret}`, '_blank');
         }
 </script>
 </body>
