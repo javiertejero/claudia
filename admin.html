@@ -56,9 +56,10 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
                 </span>
             </div>
         </div>
+        
         <div>
-            <button id="export-btn">
-                📥 Exportar CSV
+            <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                ⚠️ Borrar Base de Datos
             </button>
         </div>
     </div>
@@ -162,6 +163,29 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
         document.getElementById("export-btn").addEventListener("click", () => {
             window.location.href = `/admin/${secret}/export.csv`;
         });
-    </script>
+
+        function resetDatabase() {
+            const warning1 = "⚠️ ¡ATENCIÓN! Vas a BORRAR TODAS LAS RESERVAS del sistema.\n\nEsta acción NO se puede deshacer y expulsará a todos los usuarios que estén conectados ahora mismo.\n\n¿Estás completamente seguro?";
+            const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con la eliminación total de la base de datos?";
+            
+            // Doble confirmación por seguridad
+            if (confirm(warning1)) {
+                if (confirm(warning2)) {
+                    // Enviamos la orden al servidor a través de la conexión segura existente
+                    ws.send(JSON.stringify({ action: "reset_db" }));
+                    
+                    // Feedback visual temporal en el botón
+                    const btn = document.querySelector("button[onclick='resetDatabase()']");
+                    const textoOriginal = btn.innerHTML;
+                    btn.innerHTML = "⏳ Borrando...";
+                    btn.style.background = "#991b1b";
+                    setTimeout(() => {
+                        btn.innerHTML = textoOriginal;
+                        btn.style.background = "#ef4444";
+                    }, 2000);
+                }
+            }
+        }
+</script>
 </body>
 </html>

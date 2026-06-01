@@ -313,13 +313,58 @@ async def admin_websocket(websocket: WebSocket, secret: str):
         seats = await get_all_seats()
         await websocket.send_text(json.dumps({"type": "admin_update", "seats": seats}))
         await broadcast_admin_stats()
+        
         while True:
-            # Mantenemos la conexión viva
-            await websocket.receive_text()
+            # Escuchamos los comandos del administrador
+            data = await websocket.receive_text()
+            
+            try:
+                payload = json.loads(data)
+                
+                if payload.get("action") == "reset_db":
+                    logger.warning("El administrador ha solicitado el RESETEO TOTAL de la base de datos.")
+                    
+                    # 1. Borrar tabla completa y recrearla con el init_db() original
+                    async with aiosqlite.connect(DB_FILE) as db:
+                        await db.execute("DROP TABLE IF EXISTS seats")
+                        await db.commit()
+                    await init_db()
+                    
+                    # 2. Expulsar a todos los clientes (Evitar estados corruptos)
+                    for cid, ws_conn in list(active_connections.items()):
+                        try:
+                            await ws_conn.send_text(json.dumps({
+                                "type": "timeout",
+                                "message": "El administrador ha reiniciado el sistema. Todas las reservas se han borrado. Por favor, recarga la página para empezar de nuevo."
+                            }))
+                            await ws_conn.close()
+                        except Exception:
+                            pass
+                            
+                    # 3. Limpiar toda la memoria del servidor
+                    active_connections.clear()
+                    active_users.clear()
+                    waiting_queue.clear()
+                    active_users_names.clear()
+                    for task in active_user_tasks.values():
+                        task.cancel()
+                    active_user_tasks.clear()
+                    active_user_expires.clear()
+                    
+                    # 4. Refrescar los paneles admin conectados
+                    new_seats = await get_all_seats()
+                    for admin_ws in list(admin_connections):
+                        try:
+                            await admin_ws.send_text(json.dumps({"type": "admin_update", "seats": new_seats}))
+                        except Exception:
+                            pass
+                    await broadcast_admin_stats()
+                    
+            except json.JSONDecodeError:
+                pass
             
     except WebSocketDisconnect:
         admin_connections.remove(websocket)
-
 
 async def broadcast_admin_stats():
     """Envía el conteo de usuarios activos y en cola a los administradores."""
