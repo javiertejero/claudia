@@ -102,7 +102,7 @@
                 💬 Enviar a WhatsApp
             </button>
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
-            <button onclick="finalizarReserva()" style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
+            <button id="finalizar" onclick="finalizarReserva()" style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
                 ✅ Finalizar Reserva
             </button>
         </div>
@@ -111,6 +111,8 @@
     <script>
         let textoReservasFormateado = "";
         let timerInterval;
+        let wakeLock = null;
+        let finalizado = false;
         const ASIENTOS_POR_FILA = 20;
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
@@ -119,6 +121,50 @@
             clientId = crypto.randomUUID();
             localStorage.setItem("clientId", clientId);
         }
+
+        // Función para solicitar el bloqueo de pantalla
+        async function solicitarWakeLock() {
+            if (finalizado) {
+                console.log('ya has finalizado, no solicitamos wake lock...')
+                return
+            }
+            if ('wakeLock' in navigator && wakeLock === null) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock activado: Pantalla encendida');
+                    
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock liberado por el sistema');
+                        wakeLock = null; // Reseteamos para que el próximo clic lo vuelva a pedir
+                    });
+                } catch (err) {
+                    console.warn(`Error al solicitar Wake Lock: ${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        // Función para liberarlo cuando ya no nos hace falta
+        function liberarWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().catch(() => {});
+                wakeLock = null;
+            }
+        }
+
+        // Cualquier clic en la pantalla intentará adquirir el lock si no lo tenemos ya
+        document.addEventListener('click', () => {
+            if (document.visibilityState === 'visible') {
+                solicitarWakeLock();
+            }
+        });
+
+        // Mantenemos el de visibilidad por si acaso el SO permite readquirirlo 
+        // sin clic extra al volver de otra app
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                solicitarWakeLock();
+            }
+        });
 
         // Auto-login si ya teníamos los datos guardados
         window.onload = () => {
@@ -145,6 +191,10 @@
 
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("app-screen").style.display = "block";
+            
+            // ACTIVAMOS EL WAKE LOCK AQUÍ (aprovechando el clic del usuario)
+            solicitarWakeLock();
+
             conectarWebSocket(nombre, apellido);
         }
 
@@ -189,6 +239,7 @@
 
                 if (data.type === "timeout") {
                     clearInterval(timerInterval);
+                    liberarWakeLock();
                     document.getElementById("app-screen").innerHTML = `
                         <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                             <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
@@ -202,7 +253,7 @@
                 // Capturar el evento de multipestaña
                 if (data.type === "duplicate") {
                     clearInterval(timerInterval);
-                    
+                    liberarWakeLock();
                     // Borramos toda la interfaz sustituyendo el body
                     document.body.innerHTML = `
                         <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -440,7 +491,11 @@ function renderizarSesiones(seats) {
             // Cerrar el websocket desencadena toda la limpieza en el servidor al instante
             if (ws) ws.close();
             clearInterval(timerInterval);
-            
+            finalizado = true;            
+            liberarWakeLock(); // liberamos wake lock
+
+            document.getElementById("finalizar").style.display = "none";
+
             // Pantalla de agradecimiento
             document.getElementById("app-screen").innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
