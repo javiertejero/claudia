@@ -112,6 +112,7 @@
         let textoReservasFormateado = "";
         let timerInterval;
         let wakeLock = null;
+        let tiempoAgotadoFlag = false;
         let finalizado = false;
         const ASIENTOS_POR_FILA = 20;
         const mitad = ASIENTOS_POR_FILA / 2;
@@ -197,6 +198,21 @@
 
             conectarWebSocket(nombre, apellido);
         }
+        
+        function tiempoAgotado() {
+            if (tiempoAgotadoFlag) {
+                console.warning('tiempoAgotado invocado más de una vez, ignorando')
+                return;
+            }
+            tiempoAgotadoFlag = true;
+            document.getElementById("app-screen").innerHTML = `
+                <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
+                    <p>${data.message}</p>
+                    <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1.5rem;">Volver a intentar</button>
+                </div>
+            `;
+        }
 
         function conectarWebSocket(nombre, apellido) {
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -240,13 +256,7 @@
                 if (data.type === "timeout") {
                     clearInterval(timerInterval);
                     liberarWakeLock();
-                    document.getElementById("app-screen").innerHTML = `
-                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
-                            <p>${data.message}</p>
-                            <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1.5rem;">Volver a intentar</button>
-                        </div>
-                    `;
+                    tiempoAgotado();
                     if (ws) ws.close(); // Cerramos explícitamente en cliente
                 }
 
@@ -476,6 +486,7 @@ function renderizarSesiones(seats) {
                 if (tiempoRestante <= 0) {
                     clearInterval(timerInterval);
                     display.innerText = `⏱️ 00:00`;
+                    tiempoAgotado();
                     return;
                 }
 
