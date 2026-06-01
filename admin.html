@@ -159,14 +159,6 @@
             conectarDashboard(secret);
         }
 
-        // if (secret) {
-        //     // Ocultamos el login y mostramos la interfaz principal
-        //     document.getElementById("admin-login").style.display = "none";
-        //     document.getElementById("admin-dashboard").style.display = "block";
-
-        //     iniciarConexion();
-        // }
-
         // 4. CONEXIÓN WEBSOCKET Y GESTIÓN DE ERRORES
         function conectarDashboard(token) {
             // Cambiamos la interfaz provisionalmente
@@ -176,7 +168,7 @@
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             const wsUrl = `${protocol}://${window.location.host}/ws/admin/${token}`;
             
-            ws = new WebSocket(wsUrl);
+            let ws = new WebSocket(wsUrl);
 
             // Si el servidor nos rechaza la conexión (ej. token incorrecto), saltará este evento
             ws.onclose = function(event) {
