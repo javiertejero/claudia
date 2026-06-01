@@ -242,13 +242,14 @@ function renderizarSesiones(seats) {
                         fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
                         const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
                         
+                        // Izquierda pares descendentes, Derecha impares ascendentes
                         butaca = posInRow < mitad 
-                            ? ((mitad - 1 - posInRow) * 2) + 1 
-                            : ((posInRow - mitad) * 2) + 2;
+                            ? (mitad - posInRow) * 2 
+                            : ((posInRow - mitad) * 2) + 1;
                     } else {
-                        // Tratamiento Fila 12
+                        // Tratamiento Fila 12 Invertida
                         fila = 12;
-                        const fila12Nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+                        const fila12Nums = [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23];
                         butaca = fila12Nums[seat.seat_number - 221];
                     }
 
@@ -315,7 +316,6 @@ function renderizarSesiones(seats) {
                     if (!isFila12) {
                         const posInRow = index % ASIENTOS_POR_FILA; 
 
-                        // Cabecera F1 a F11
                         if (posInRow === 0) {
                             const rowHeader = document.createElement("div");
                             rowHeader.className = "row-header";
@@ -324,8 +324,6 @@ function renderizarSesiones(seats) {
                             rowCounter++;
                         }
 
-                        // INYECCIÓN DEL PASILLO (Filas 1 a 11)
-                        // Inyectamos 3 divs vacíos consecutivos para crear un pasillo ancho
                         if (posInRow === mitad) {
                             for (let i = 0; i < 3; i++) {
                                 const spacer = document.createElement("div");
@@ -334,14 +332,13 @@ function renderizarSesiones(seats) {
                             }
                         }
 
+                        // Fórmula invertida
                         theatreSeatNum = posInRow < mitad 
-                            ? ((mitad - 1 - posInRow) * 2) + 1 
-                            : ((posInRow - mitad) * 2) + 2;
+                            ? (mitad - posInRow) * 2 
+                            : ((posInRow - mitad) * 2) + 1;
                     } else {
-                        // Lógica Fila 12 (Sin pasillos)
                         const posInRow = seat.seat_number - 221;
                         
-                        // Cabecera F12 
                         if (posInRow === 0) {
                             const rowHeader = document.createElement("div");
                             rowHeader.className = "row-header";
@@ -349,7 +346,8 @@ function renderizarSesiones(seats) {
                             gridFila12.appendChild(rowHeader);
                         }
 
-                        const fila12Nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+                        // Matriz invertida
+                        const fila12Nums = [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23];
                         theatreSeatNum = fila12Nums[posInRow];
                     }
 
@@ -368,7 +366,7 @@ function renderizarSesiones(seats) {
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
-                                alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                console.log("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
                                 return; 
                             }
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
