@@ -227,15 +227,15 @@
             };
         }
 
-        function renderizarSesiones(seats) {
+function renderizarSesiones(seats) {
             const container = document.getElementById("sessions-container");
             container.innerHTML = ""; 
             
+            // 1. Calculamos butacas
+            const mySeatsCount = seats.filter(seat => seat.is_mine).length;
 
-            // 1. Calculamos butacas y preparamos el resumen de texto
+            // 2. ACTUALIZAR WHATSAPP / PORTAPAPELES CON ANOMALÍA FILA 12
             const mySeats = seats.filter(seat => seat.is_mine);
-            const mySeatsCount = mySeats.length;
-
             if (mySeatsCount > 0) {
                 const nombreCompleto = localStorage.getItem("nombre") + " " + localStorage.getItem("apellido");
                 let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
@@ -244,13 +244,23 @@
                 mySeats.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.seat_number - b.seat_number);
 
                 mySeats.forEach(seat => {
-                    const mitad = ASIENTOS_POR_FILA / 2;
-                    const fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
-                    const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
-                    
-                    const butaca = posInRow < mitad 
-                        ? ((mitad - 1 - posInRow) * 2) + 1 
-                        : ((posInRow - mitad) * 2) + 2;
+                    let fila, butaca;
+                    const ASIENTOS_POR_FILA = 20;
+
+                    if (seat.seat_number <= 220) {
+                        const mitad = ASIENTOS_POR_FILA / 2;
+                        fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
+                        const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+                        
+                        butaca = posInRow < mitad 
+                            ? ((mitad - 1 - posInRow) * 2) + 1 
+                            : ((posInRow - mitad) * 2) + 2;
+                    } else {
+                        // Tratamiento Fila 12
+                        fila = 12;
+                        const fila12Nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+                        butaca = fila12Nums[seat.seat_number - 221];
+                    }
 
                     resumen += `• Sesión ${seat.session_time}: Fila ${fila}, Butaca ${butaca}\n`;
                 });
@@ -261,7 +271,7 @@
                 document.getElementById("action-buttons").style.display = "none";
             }
 
-            // 2. ACTUALIZAR CONTADOR FLOTANTE (Colores)
+            // 3. ACTUALIZAR CONTADOR VISUAL
             const counterDiv = document.getElementById("seat-counter");
             document.getElementById("seat-count").innerText = mySeatsCount;
             
@@ -273,9 +283,13 @@
                 counterDiv.style.background = "#1e293b"; 
             }
 
+            // 4. RENDERIZAR LAS BUTACAS
             const sesiones = ['11h', '12:45h', '18h'];
             const asientosPorSesion = {};
             sesiones.forEach(s => asientosPorSesion[s] = seats.filter(seat => seat.session_time === s));
+
+            const ASIENTOS_POR_FILA = 20;
+            const mitad = ASIENTOS_POR_FILA / 2;
 
             sesiones.forEach(sesion => {
                 const block = document.createElement("div");
@@ -286,46 +300,66 @@
                 title.innerText = `Sesión ${sesion}`;
                 block.appendChild(title);
 
-                // 1. EL ESCENARIO VA ARRIBA DEL TODO (Antes del Grid)
                 const escenario = document.createElement("div");
                 escenario.className = "escenario";
                 escenario.innerText = "ESCENARIO";
-                escenario.style.marginBottom = "20px"; // Un poco de aire con la Fila 1
+                escenario.style.marginBottom = "20px";
                 block.appendChild(escenario);
 
+                // Grid 1: Estándar (Filas 1 a 11)
                 const grid = document.createElement("div");
                 grid.className = "grid";
-                
-                // 2. CONFIGURACIÓN DINÁMICA DEL GRID (Header + Mitad + Pasillo + Mitad)
-                // Usamos 30px fijos para el pasillo central
                 grid.style.gridTemplateColumns = `max-content repeat(${mitad}, 1fr) 30px repeat(${mitad}, 1fr)`;
+
+                // Grid 2: Fila 12 Anómala
+                const gridFila12 = document.createElement("div");
+                gridFila12.className = "grid-fila12";
 
                 let rowCounter = 1;
 
                 asientosPorSesion[sesion].forEach((seat, index) => {
-                    const posInRow = index % ASIENTOS_POR_FILA;
+                    const isFila12 = seat.seat_number > 220;
+                    let theatreSeatNum;
+                    
+                    if (!isFila12) {
+                        const posInRow = index % ASIENTOS_POR_FILA; // Funciona porque índices 0-219 son filas 1-11
 
-                    // Cabecera de fila
-                    if (posInRow === 0) {
-                        const rowHeader = document.createElement("div");
-                        rowHeader.className = "row-header";
-                        rowHeader.innerText = `F${rowCounter}`;
-                        grid.appendChild(rowHeader);
-                        rowCounter++;
+                        // Cabecera F1 a F11
+                        if (posInRow === 0) {
+                            const rowHeader = document.createElement("div");
+                            rowHeader.className = "row-header";
+                            rowHeader.innerText = `F${rowCounter}`;
+                            grid.appendChild(rowHeader);
+                            rowCounter++;
+                        }
+
+                        // Pasillo Central
+                        if (posInRow === mitad) {
+                            const spacer = document.createElement("div");
+                            spacer.className = "pasillo";
+                            grid.appendChild(spacer);
+                        }
+
+                        theatreSeatNum = posInRow < mitad 
+                            ? ((mitad - 1 - posInRow) * 2) + 1 
+                            : ((posInRow - mitad) * 2) + 2;
+                    } else {
+                        // Lógica Fila 12
+                        const posInRow = seat.seat_number - 221;
+                        
+                        // Cabecera F12 (Solo se añade en el primer asiento de la fila)
+                        if (posInRow === 0) {
+                            const rowHeader = document.createElement("div");
+                            rowHeader.className = "row-header";
+                            rowHeader.innerText = `F12`;
+                            gridFila12.appendChild(rowHeader);
+                        }
+
+                        const fila12Nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+                        theatreSeatNum = fila12Nums[posInRow];
                     }
 
-                    // 3. INYECCIÓN DEL PASILLO
-                    if (posInRow === mitad) {
-                        const spacer = document.createElement("div");
-                        spacer.className = "pasillo";
-                        grid.appendChild(spacer);
-                    }
-
-                    // 4. CÁLCULO DE NÚMERO DE BUTACA (Estándar de Teatro)
-                    const theatreSeatNum = posInRow < mitad 
-                        ? ((mitad - 1 - posInRow) * 2) + 1  // Izquierda (Impares): El 1 pegado al pasillo, crece hacia afuera
-                        : ((posInRow - mitad) * 2) + 2;     // Derecha (Pares): El 2 pegado al pasillo, crece hacia afuera
-
+                    // Creación del botón de butaca
                     const btn = document.createElement("button");
                     btn.innerText = theatreSeatNum;
                     
@@ -348,9 +382,18 @@
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
                         }
                     };
-                    grid.appendChild(btn);
+
+                    // Separación de inyección al DOM por bloque
+                    if (!isFila12) {
+                        grid.appendChild(btn);
+                    } else {
+                        gridFila12.appendChild(btn);
+                    }
                 });
+
+                // Añadir ambos grids al bloque visual de la sesión
                 block.appendChild(grid);
+                block.appendChild(gridFila12);
                 container.appendChild(block);
             });
         }
