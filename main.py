@@ -192,13 +192,13 @@ async def websocket_endpoint(
     client_id: str,
     nombre: str = "",
     apellido: str = "",
-    secret: str = "", 
+    secret: str = "",
 ):
     await websocket.accept()
     global virtuales_procesados
 
     # Comprobamos si tiene el pase VIP
-    is_privileged = (secret == ADMIN_SECRET)
+    is_privileged = secret == ADMIN_SECRET
 
     # 1. EXPULSIÓN DE MULTIPESTAÑA
     if client_id in active_connections:
@@ -222,7 +222,9 @@ async def websocket_endpoint(
     apellido_limpio = html.escape(apellido[:50])
     # Distinguimos visualmente en el admin quién viene de la taquilla
     if is_privileged:
-        active_users_names[client_id] = f"[TAQ] {nombre_limpio} {apellido_limpio}".strip()
+        active_users_names[client_id] = (
+            f"[TAQ] {nombre_limpio} {apellido_limpio}".strip()
+        )
     else:
         active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
 
@@ -294,9 +296,6 @@ async def websocket_endpoint(
             if payload.get("action") == "ping":
                 logger.info("Ping from client %s", client_id)
                 continue
-            if payload.get("action") == "reset_counter":
-                    virtuales_procesados = 0
-                    await broadcast_admin_stats()
             if client_id in active_users and payload.get("action") == "toggle":
                 # Usamos .get() y validamos el tipo para evitar excepciones
                 seat_num = payload.get("seat_number")
@@ -406,10 +405,12 @@ async def admin_websocket(websocket: WebSocket, secret: str):
         while True:
             # Escuchamos los comandos del administrador
             data = await websocket.receive_text()
-
             try:
                 payload = json.loads(data)
-
+                if payload.get("action") == "reset_counter":
+                    global virtuales_procesados
+                    virtuales_procesados = 0
+                    await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
                     logger.warning(
                         "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
