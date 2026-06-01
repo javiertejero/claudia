@@ -13,3 +13,4 @@ wheels/
 reservas.db
 .env
 reservas_espectaculo.csv
+.DS_Store
