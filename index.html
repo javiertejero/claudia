@@ -199,16 +199,16 @@
             conectarWebSocket(nombre, apellido);
         }
         
-        function tiempoAgotado() {
+        function tiempoAgotado(message) {
             if (tiempoAgotadoFlag) {
-                console.warning('tiempoAgotado invocado más de una vez, ignorando')
+                console.warn('tiempoAgotado invocado más de una vez, ignorando')
                 return;
             }
             tiempoAgotadoFlag = true;
             document.getElementById("app-screen").innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                     <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
-                    <p>${data.message}</p>
+                    <p>${message}</p>
                     <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1.5rem;">Volver a intentar</button>
                 </div>
             `;
@@ -256,7 +256,7 @@
                 if (data.type === "timeout") {
                     clearInterval(timerInterval);
                     liberarWakeLock();
-                    tiempoAgotado();
+                    tiempoAgotado(data.message);
                     if (ws) ws.close(); // Cerramos explícitamente en cliente
                 }
 
@@ -486,7 +486,7 @@ function renderizarSesiones(seats) {
                 if (tiempoRestante <= 0) {
                     clearInterval(timerInterval);
                     display.innerText = `⏱️ 00:00`;
-                    tiempoAgotado();
+                    tiempoAgotado("Tiempo agotado (en interfaz). Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo.");
                     return;
                 }
 
