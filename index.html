@@ -129,6 +129,29 @@
         const adminSecret = urlParams.get('taquilla');
         const isTaquilla = !!adminSecret;
 
+        if (isTaquilla) {
+            const taquillaChannel = new BroadcastChannel('taquilla_channel');
+            
+            // Al abrir la pestaña, preguntamos si hay alguien más activo
+            taquillaChannel.postMessage('ping');
+            
+            taquillaChannel.onmessage = (event) => {
+                if (event.data === 'ping') {
+                    // Otra pestaña nueva acaba de preguntar. Le decimos que nosotros somos la principal.
+                    taquillaChannel.postMessage('pong');
+                } else if (event.data === 'pong') {
+                    // Hemos recibido respuesta: ya hay una taquilla activa. Bloqueamos esta interfaz.
+                    document.body.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h2 style="color: #ea580c; margin-top: 0;">🎫 Taquilla en uso</h2>
+                            <p>Ya tienes otra pestaña de Taquilla abierta en este navegador.</p>
+                            <p style="font-size: 0.9em; color: #64748b; margin-top: 2rem;">Por seguridad, cierra esta pestaña y continúa gestionando las entradas desde la original.</p>
+                        </div>
+                    `;
+                }
+            };
+        }
+
         // 2. Modificación visual, amnesia de datos y auto-login
         document.addEventListener("DOMContentLoaded", () => {
             const header = document.querySelector("#login-screen h1, #login-screen h2, #login-screen h3");
