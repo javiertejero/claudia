@@ -216,7 +216,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, nombre: str =
             except json.JSONDecodeError as exc:
                 logger.error("Error decoding json %s", exc)
                 continue # Si no es un JSON válido, lo ignoramos
-
+            if payload.get("action") == "ping":
+                logger.info("Ping from client %s", client_id)
+                continue
             if client_id in active_users and payload.get("action") == "toggle":
                 # Usamos .get() y validamos el tipo para evitar excepciones
                 seat_num = payload.get("seat_number")

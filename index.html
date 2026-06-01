@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva de Butacas</title>
     <style>
-        body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #f4f4f5; margin: 0; }
+        body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #f4f4f5; margin: 150px 0 0 0; }
         
         /* Pantalla de login */
         #login-screen { max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -406,6 +406,12 @@
             `;
         }
 
+        // Latido cada 10 segundos para evitar que Fly.io o el navegador corten la conexión
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: "ping" }));
+            }
+        }, 10000);
     </script>
 </body>
 </html>
