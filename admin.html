@@ -74,6 +74,12 @@
                 <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
                     ⚠️ Borrar Base de Datos
                 </button>
+                <div style="background: #f1f5f9; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #cbd5e1; margin-right: auto; margin-left: 20px;">
+                    <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter" style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
+                    <button onclick="ws.send(JSON.stringify({action: 'reset_counter'}))" style="background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #475569;">
+                        🔄 Reset
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -101,7 +107,7 @@
         const ASIENTOS_POR_FILA = 20;
         
         // Extraemos el secreto de la URL actual (ej: /admin/550e8400-...)
-        let secret = "";
+        let secret = localStorage.getItem('taquillaSecret') || "";
         let ws;
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
@@ -117,6 +123,14 @@
             iniciarConexion();
         }
 
+        if (secret) {
+            // Ocultamos el login y mostramos la interfaz principal
+            document.getElementById("admin-login").style.display = "none";
+            document.getElementById("admin-dashboard").style.display = "block";
+
+            iniciarConexion();
+        }
+
         function iniciarConexion() {
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             // El websocket se conecta usando el secreto que el usuario acaba de escribir
@@ -125,11 +139,17 @@
 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+                // Guardamos modo taquilla
+                localStorage.setItem('taquillaSecret', secret);
+
                 if (data.type === "admin_update") {
                     renderDashboard(data.seats);
                 } else if (data.type === "admin_stats") {
                     document.getElementById("active-count").innerText = data.active_users;
                     document.getElementById("queued-count").innerText = data.queued_users;
+                    if (document.getElementById("virtual-counter")) {
+                        document.getElementById("virtual-counter").innerText = data.virtuales_procesados;
+                    }
                 }
             };
 
@@ -226,7 +246,6 @@
         }
 
         function abrirTaquilla() {
-            // Sustituimos el querystring en la URL por persistencia local
             localStorage.setItem('taquillaSecret', secret);
             window.open(`/`, '_blank');
         }

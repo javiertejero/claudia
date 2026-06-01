@@ -32,6 +32,7 @@ admin_connections = set()
 # Estado en memoria
 active_connections = {}  # {client_id: websocket}
 active_users_names = {}  # {client_id: "Nombre Apellido"}
+virtuales_procesados = 0
 waiting_queue = []
 active_users = set()
 ASIENTOS_POR_FILA = 20
@@ -289,6 +290,10 @@ async def websocket_endpoint(
             if payload.get("action") == "ping":
                 logger.info("Ping from client %s", client_id)
                 continue
+            if payload.get("action") == "reset_counter":
+                    global virtuales_procesados
+                    virtuales_procesados = 0
+                    await broadcast_admin_stats()
             if client_id in active_users and payload.get("action") == "toggle":
                 # Usamos .get() y validamos el tipo para evitar excepciones
                 seat_num = payload.get("seat_number")
@@ -464,6 +469,7 @@ async def broadcast_admin_stats():
                 "type": "admin_stats",
                 "active_users": len(active_users),
                 "queued_users": len(waiting_queue),
+                "virtuales_procesados": virtuales_procesados,
             }
         )
         for admin_ws in list(admin_connections):
