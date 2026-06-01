@@ -36,16 +36,6 @@
             margin: 0 auto 1.5rem auto; 
             align-items: center; 
         }
-        .grid-fila12 { 
-            display: grid; 
-            /* 1 columna para 'F12', 23 fracciones para asientos continuos */
-            grid-template-columns: max-content repeat(23, 1fr); 
-            gap: 8px; 
-            max-width: 880px; 
-            min-width: 650px; 
-            margin: 10px auto 1.5rem auto; 
-            align-items: center; 
-        }
         .session-title { margin-top: 0; color: #333; }
         
         .row-header {
@@ -309,11 +299,12 @@ function renderizarSesiones(seats) {
                 // Grid 1: Estándar (Filas 1 a 11)
                 const grid = document.createElement("div");
                 grid.className = "grid";
-                grid.style.gridTemplateColumns = `max-content repeat(${mitad}, 1fr) 30px repeat(${mitad}, 1fr)`;
+                grid.style.gridTemplateColumns = `max-content repeat(${mitad}, 1fr) repeat(3, 1fr) repeat(${mitad}, 1fr)`;
 
                 // Grid 2: Fila 12 Anómala
                 const gridFila12 = document.createElement("div");
-                gridFila12.className = "grid-fila12";
+                gridFila12.className = "grid";
+                gridFila12.style.gridTemplateColumns = `max-content repeat(23, 1fr)`;
 
                 let rowCounter = 1;
 
@@ -322,7 +313,7 @@ function renderizarSesiones(seats) {
                     let theatreSeatNum;
                     
                     if (!isFila12) {
-                        const posInRow = index % ASIENTOS_POR_FILA; // Funciona porque índices 0-219 son filas 1-11
+                        const posInRow = index % ASIENTOS_POR_FILA; 
 
                         // Cabecera F1 a F11
                         if (posInRow === 0) {
@@ -333,21 +324,24 @@ function renderizarSesiones(seats) {
                             rowCounter++;
                         }
 
-                        // Pasillo Central
+                        // INYECCIÓN DEL PASILLO (Filas 1 a 11)
+                        // Inyectamos 3 divs vacíos consecutivos para crear un pasillo ancho
                         if (posInRow === mitad) {
-                            const spacer = document.createElement("div");
-                            spacer.className = "pasillo";
-                            grid.appendChild(spacer);
+                            for (let i = 0; i < 3; i++) {
+                                const spacer = document.createElement("div");
+                                spacer.className = "pasillo";
+                                grid.appendChild(spacer);
+                            }
                         }
 
                         theatreSeatNum = posInRow < mitad 
                             ? ((mitad - 1 - posInRow) * 2) + 1 
                             : ((posInRow - mitad) * 2) + 2;
                     } else {
-                        // Lógica Fila 12
+                        // Lógica Fila 12 (Sin pasillos)
                         const posInRow = seat.seat_number - 221;
                         
-                        // Cabecera F12 (Solo se añade en el primer asiento de la fila)
+                        // Cabecera F12 
                         if (posInRow === 0) {
                             const rowHeader = document.createElement("div");
                             rowHeader.className = "row-header";
@@ -374,7 +368,7 @@ function renderizarSesiones(seats) {
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
-                                console.log("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                alert("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
                                 return; 
                             }
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
@@ -383,7 +377,7 @@ function renderizarSesiones(seats) {
                         }
                     };
 
-                    // Separación de inyección al DOM por bloque
+                    // Separación de inyección al DOM
                     if (!isFila12) {
                         grid.appendChild(btn);
                     } else {
