@@ -106,8 +106,24 @@
     <script>
         const ASIENTOS_POR_FILA = 20;
         
-        // Extraemos el secreto de la URL actual (ej: /admin/550e8400-...)
-        let secret = localStorage.getItem('taquillaSecret') || "";
+        // 1. GESTIÓN DEL SECRETO Y OFUSCACIÓN DE URL
+        let secret = localStorage.getItem('taquillaSecret');
+        
+        // Limpiamos la ruta actual (ej: ['', 'admin', '550e8400...'])
+        const pathParts = window.location.pathname.split("/").filter(p => p);
+
+        // Si entramos a través del enlace con secreto (/admin/EL_SECRETO)
+        if (pathParts[0] === "admin" && pathParts.length > 1) {
+            const urlSecret = pathParts[1];
+            if (urlSecret) {
+                secret = urlSecret;
+                localStorage.setItem('taquillaSecret', secret); // Lo guardamos
+                
+                // MAGIA: Borramos el secreto de la barra de direcciones y del historial
+                window.history.replaceState({}, document.title, "/admin");
+            }
+        }
+
         let ws;
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;

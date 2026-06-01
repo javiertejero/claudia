@@ -383,7 +383,11 @@ async def websocket_endpoint(
 
 
 @app.get("/admin")
-async def get_admin():
+@app.get("/admin/{secret}")
+async def get_admin(secret: str | None = None):
+    # Si viene con secreto en la URL y es incorrecto, podemos rechazarlo rápido
+    if secret and secret != ADMIN_SECRET:
+        return {"error": "No autorizado"}
     return FileResponse("admin.html")
 
 
