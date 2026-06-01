@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Danza</title>
     <style>
-body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
+        body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
         .status-dot { display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 5px; }
         
@@ -192,7 +192,6 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
         }
 
         function abrirTaquilla() {
-            localStorage.clear() // limipieza de previos usuario/nombre, etc.
             // Abre una nueva pestaña hacia el index público pero inyectando el secreto
             window.open(`/?taquilla=${secret}`, '_blank');
         }

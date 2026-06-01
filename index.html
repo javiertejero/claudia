@@ -129,17 +129,33 @@
         const adminSecret = urlParams.get('taquilla');
         const isTaquilla = !!adminSecret;
 
-        // 2. Modificación visual y amnesia de datos
+        // 2. Modificación visual, amnesia de datos y auto-login
         document.addEventListener("DOMContentLoaded", () => {
+            const header = document.querySelector("#login-screen h1, #login-screen h2, #login-screen h3");
+            const inputNombre = document.getElementById("input-nombre");
+            const inputApellido = document.getElementById("input-apellido");
+
             if (isTaquilla) {
-                const header = document.querySelector("#login-screen h2");
-                header.innerHTML = "🎫 MODO TAQUILLA";
-                header.style.color = "#d97706";
-                document.getElementById("nombre").value = "";
-                document.getElementById("apellido").value = "";
+                // MODO TAQUILLA: Preparar UI especial y asegurar que no haya auto-login
+                if (header) {
+                    header.innerHTML = "🎫 MODO TAQUILLA";
+                    header.style.color = "#d97706";
+                }
+                if (inputNombre) inputNombre.value = "";
+                if (inputApellido) inputApellido.value = "";
+                
             } else {
-                document.getElementById("nombre").value = localStorage.getItem("nombre") || "";
-                document.getElementById("apellido").value = localStorage.getItem("apellido") || "";
+                // MODO NORMAL: Recuperar datos del localStorage
+                const storedNombre = localStorage.getItem("nombre");
+                const storedApellido = localStorage.getItem("apellido");
+                
+                if (inputNombre) inputNombre.value = storedNombre || "";
+                if (inputApellido) inputApellido.value = storedApellido || "";
+
+                // Si ya tiene los datos guardados, le saltamos la pantalla de login automáticamente
+                if (storedNombre && storedApellido) {
+                    iniciarApp();
+                }
             }
         });
 
@@ -196,17 +212,6 @@
                 solicitarWakeLock();
             }
         });
-
-        // Auto-login si ya teníamos los datos guardados
-        window.onload = () => {
-            const storedNombre = localStorage.getItem("nombre");
-            const storedApellido = localStorage.getItem("apellido");
-            if (storedNombre && storedApellido) {
-                document.getElementById("input-nombre").value = storedNombre;
-                document.getElementById("input-apellido").value = storedApellido;
-                iniciarApp();
-            }
-        };
 
         function iniciarApp() {
             const nombre = document.getElementById("input-nombre").value.trim();
