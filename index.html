@@ -36,6 +36,16 @@
             margin: 0 auto 1.5rem auto; 
             align-items: center; 
         }
+        .grid-fila12 { 
+            display: grid; 
+            /* 1 columna para 'F12', 23 fracciones para asientos continuos */
+            grid-template-columns: max-content repeat(23, 1fr); 
+            gap: 8px; 
+            max-width: 880px; 
+            min-width: 650px; 
+            margin: 10px auto 1.5rem auto; 
+            align-items: center; 
+        }
         .session-title { margin-top: 0; color: #333; }
         
         .row-header {

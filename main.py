@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
-MAX_ACTIVE_USERS = 2
+MAX_ACTIVE_USERS = 1    
 SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
 active_user_tasks = {} # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
@@ -54,10 +54,20 @@ async def init_db():
             count = await cursor.fetchone()
             if count[0] == 0:
                 for session in ['11h', '12:45h', '18h']:
+                    # Filas 1 a 11 (20 asientos) -> IDs 1 a 220 
+                    # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
                     await db.executemany(
                         'INSERT INTO seats (seat_number, session_time, status) VALUES (?, ?, ?)',
-                        [(i, session, 'free') for i in range(1, ASIENTOS_POR_FILA * FILAS + 1)]
+                        [(i, session, 'free') for i in range(1, ASIENTOS_POR_FILA * FILAS + 1 + 3)]
                     )
+                    # # Filas 1 a 11 (20 asientos) -> IDs 1 a 220 
+                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
+                    # for seat_number in range(1, 244):
+                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
+                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
+                    # for seat_number in range(221, 244):
+                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
+                await db.commit()
         await db.commit()
 
 @asynccontextmanager
@@ -352,11 +362,19 @@ async def export_csv(secret: str):
                 fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
                 pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
 
-                # La misma lógica del estándar de teatro
-                if pos_in_row < mitad:
-                    butaca = ((mitad - 1 - pos_in_row) * 2) + 1
+                if seat_id <= 220:
+                    # La misma lógica del estándar de teatro
+                    fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
+                    pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
+                    if pos_in_row < mitad:
+                        butaca = ((mitad - 1 - pos_in_row) * 2) + 1
+                    else:
+                        butaca = ((pos_in_row - mitad) * 2) + 2
                 else:
-                    butaca = ((pos_in_row - mitad) * 2) + 2
+                    # Tratamiento de la anomalía de la fila 12
+                    fila = 12
+                    fila12_nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+                    butaca = fila12_nums[seat_id - 221]
 
                 writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
 

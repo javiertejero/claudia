@@ -33,11 +33,19 @@ def exportar_csv():
             fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
             pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
 
-            # La misma lógica del estándar de teatro
-            if pos_in_row < mitad:
-                butaca = ((mitad - 1 - pos_in_row) * 2) + 1
+            if seat_id <= 220:
+                # La misma lógica del estándar de teatro
+                fila = math.ceil(seat_id / ASIENTOS_POR_FILA)
+                pos_in_row = (seat_id - 1) % ASIENTOS_POR_FILA
+                if pos_in_row < mitad:
+                    butaca = ((mitad - 1 - pos_in_row) * 2) + 1
+                else:
+                    butaca = ((pos_in_row - mitad) * 2) + 2
             else:
-                butaca = ((pos_in_row - mitad) * 2) + 2
+                # Tratamiento de la anomalía de la fila 12
+                fila = 12
+                fila12_nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+                butaca = fila12_nums[seat_id - 221]
 
             writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
 

@@ -132,14 +132,21 @@ body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; c
             ocupados.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.owner_name.localeCompare(b.owner_name));
 
             ocupados.forEach(seat => {
-                // Cálculo de teatro
-                const mitad = ASIENTOS_POR_FILA / 2;
-                const fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
-                const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+                let fila, butaca;
                 
-                const butaca = posInRow < mitad 
-                    ? ((mitad - 1 - posInRow) * 2) + 1 
-                    : ((posInRow - mitad) * 2) + 2;
+                if (seat.seat_number <= 220) {
+                    const mitad = ASIENTOS_POR_FILA / 2;
+                    fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
+                    const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+                    
+                    butaca = posInRow < mitad 
+                        ? ((mitad - 1 - posInRow) * 2) + 1 
+                        : ((posInRow - mitad) * 2) + 2;
+                } else {
+                    fila = 12;
+                    const fila12Nums = [23, 21, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+                    butaca = fila12Nums[seat.seat_number - 221];
+                }
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
