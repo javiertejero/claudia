@@ -375,10 +375,8 @@ async def websocket_endpoint(
             await broadcast_admin_stats()
 
 
-@app.get("/admin/{secret}")
-async def get_admin_panel(secret: str):
-    if secret != ADMIN_SECRET:
-        return {"error": "No autorizado"}  # Podrías devolver un 404 para disimular
+@app.get("/admin")
+async def get_admin():
     return FileResponse("admin.html")
 
 

@@ -126,7 +126,7 @@
     <script>
         // 1. Detección del Modo Dios
         const urlParams = new URLSearchParams(window.location.search);
-        const adminSecret = urlParams.get('taquilla');
+        const adminSecret = localStorage.getItem('taquillaSecret');
         const isTaquilla = !!adminSecret;
 
         if (isTaquilla) {

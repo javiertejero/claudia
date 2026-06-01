@@ -42,71 +42,105 @@
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <div>
-            <h1 style="margin-bottom: 0;">Control de Aforo</h1>
-            <div style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
-                <span class="status-dot"></span> En vivo
-                <span style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
-                    👥 Editando: <strong id="active-count" style="color: #2563eb;">0</strong>
-                </span>
-                <span style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
-                    ⏳ En cola: <strong id="queued-count" style="color: #ea580c;">0</strong>
-                </span>
-            </div>
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-            <button onclick="abrirTaquilla()" style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-                🎫 Taquilla (Saltar Cola)
-            </button>
-            
-            <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-                ⚠️ Borrar Base de Datos
-            </button>
-        </div>
+    <div id="admin-login" style="max-width: 350px; margin: 15vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+        <h2 style="margin-top: 0; color: #0f172a;">Acceso Admin</h2>
+        <input type="password" id="input-secret" placeholder="Contraseña..." style="display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+        <button onclick="loginAdmin()" style="background: #0f172a; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold;">Entrar</button>
     </div>
 
-    <div class="stats-container" id="stats">
+    <div id="admin-dashboard" style="display: none;">
+
+        <div class="header">
+            <div>
+                <h1 style="margin-bottom: 0;">Control de Aforo</h1>
+                <div style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
+                    <span class="status-dot"></span> En vivo
+                    <span style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
+                        👥 Editando: <strong id="active-count" style="color: #2563eb;">0</strong>
+                    </span>
+                    <span style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
+                        ⏳ En cola: <strong id="queued-count" style="color: #ea580c;">0</strong>
+                    </span>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="abrirTaquilla()" style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    🎫 Taquilla (Saltar Cola)
+                </button>
+                <button id="export-btn">
+                    📥 Exportar CSV
+                </button>
+                <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    ⚠️ Borrar Base de Datos
+                </button>
+            </div>
         </div>
 
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>Sesión</th>
-                    <th>Nombre</th>
-                    <th>Fila</th>
-                    <th>Butaca</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                </tbody>
-        </table>
+        <div class="stats-container" id="stats">
+            </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sesión</th>
+                        <th>Nombre</th>
+                        <th>Fila</th>
+                        <th>Butaca</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
         const ASIENTOS_POR_FILA = 20;
         
         // Extraemos el secreto de la URL actual (ej: /admin/550e8400-...)
-        const secret = window.location.pathname.split("/").pop();
+        let secret = "";
+        let ws;
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
-        
-        const ws = new WebSocket(wsUrl);
 
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.type === "admin_update") {
-                renderDashboard(data.seats);
-            } 
-            else if (data.type === "admin_stats") {
-                document.getElementById("active-count").innerText = data.active_users;
-                document.getElementById("queued-count").innerText = data.queued_users;
-            }
-        };
+        function loginAdmin() {
+            secret = document.getElementById("input-secret").value;
+            if (!secret) return;
+
+            // Ocultamos el login y mostramos la interfaz principal
+            document.getElementById("admin-login").style.display = "none";
+            document.getElementById("admin-dashboard").style.display = "block";
+
+            iniciarConexion();
+        }
+
+        function iniciarConexion() {
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            // El websocket se conecta usando el secreto que el usuario acaba de escribir
+            const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === "admin_update") {
+                    renderDashboard(data.seats);
+                } else if (data.type === "admin_stats") {
+                    document.getElementById("active-count").innerText = data.active_users;
+                    document.getElementById("queued-count").innerText = data.queued_users;
+                }
+            };
+
+            // Si la clave es incorrecta, FastAPI rechaza el WS
+            ws.onclose = function() {
+                if (document.getElementById("admin-dashboard").style.display === "block") {
+                    alert("Conexión rechazada. ¿Contraseña incorrecta?");
+                    window.location.reload();
+                }
+            };
+        }
 
         function renderDashboard(seats) {
             const sesiones = ['11h', '12:45h', '18h'];
@@ -192,8 +226,9 @@
         }
 
         function abrirTaquilla() {
-            // Abre una nueva pestaña hacia el index público pero inyectando el secreto
-            window.open(`/?taquilla=${secret}`, '_blank');
+            // Sustituimos el querystring en la URL por persistencia local
+            localStorage.setItem('taquillaSecret', secret);
+            window.open(`/`, '_blank');
         }
 </script>
 </body>
