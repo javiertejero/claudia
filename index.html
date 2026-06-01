@@ -73,6 +73,19 @@
             z-index: 1000;
             transition: background 0.3s ease;
         }
+
+        /* Animación divertida para el límite de butacas */
+        @keyframes giro-limite {
+            0% { transform: scale(1) rotate(0deg); }
+            20% { transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
+            80% { transform: scale(1.1) rotate(370deg); box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
+            100% { transform: scale(1) rotate(360deg); }
+        }
+        
+        .anim-limite {
+            /* Ejecuta la animación en 0.6 segundos */
+            animation: giro-limite 0.6s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -93,7 +106,7 @@
 
     <div id="seat-counter">
         <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/6</div>
-        
+        <div id="warning-maximo" style="display: none;">LO SIENTO, YA HAS ESCOGIDO EL MÁXIMO - GRACIAS</div>
         <div id="action-buttons" style="display: none; gap: 8px; flex-direction: column;">
             <button onclick="copiarReservas()" style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
                 📋 Copiar
@@ -325,14 +338,18 @@ function renderizarSesiones(seats) {
 
             // 3. ACTUALIZAR CONTADOR VISUAL
             const counterDiv = document.getElementById("seat-counter");
+            const warningMax = document.getElementById("warning-maximo");
             document.getElementById("seat-count").innerText = mySeatsCount;
             
             if (mySeatsCount >= 6) {
                 counterDiv.style.background = "#ef4444"; 
+                warningMax.style.display = "block";
             } else if (mySeatsCount > 0) {
                 counterDiv.style.background = "#22c55e"; 
+                warningMax.style.display = "none";
             } else {
                 counterDiv.style.background = "#1e293b"; 
+                warningMax.style.display = "none";
             }
 
             // 4. RENDERIZAR LAS BUTACAS
@@ -427,7 +444,16 @@ function renderizarSesiones(seats) {
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
-                                console.log("Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento...");
+                                const counterDiv = document.getElementById("seat-counter");
+                                
+                                // Reiniciamos la animación por si hace clics muy rápidos
+                                counterDiv.classList.remove("anim-limite");
+                                void counterDiv.offsetWidth; // Fuerza al navegador a repintar el elemento
+                                counterDiv.classList.add("anim-limite");
+                                
+                                // Opcional: Vibración háptica en móviles si está disponible
+                                if (navigator.vibrate) navigator.vibrate(200); 
+                                
                                 return; 
                             }
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));

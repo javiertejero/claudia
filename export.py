@@ -42,7 +42,31 @@ def exportar_csv():
                     butaca = ((pos_in_row - mitad) * 2) + 1
             else:
                 fila = 12
-                fila12_nums = [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23]
+                fila12_nums = [
+                    22,
+                    20,
+                    18,
+                    16,
+                    14,
+                    12,
+                    10,
+                    8,
+                    6,
+                    4,
+                    2,
+                    1,
+                    3,
+                    5,
+                    7,
+                    9,
+                    11,
+                    13,
+                    15,
+                    17,
+                    19,
+                    21,
+                    23,
+                ]
                 butaca = fila12_nums[seat_id - 221]
 
             writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
