@@ -35,7 +35,7 @@ active_users_names = {}  # {client_id: "Nombre Apellido"}
 waiting_queue = []       
 active_users = set()     
 ASIENTOS_POR_FILA = 20
-FILAS = 10
+FILAS = 12
 
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
