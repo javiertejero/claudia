@@ -222,7 +222,7 @@ async def websocket_endpoint(
         active_users_names[client_id] = f"[TAQ] {nombre_limpio} {apellido_limpio}".strip()
     else:
         active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
-        
+
     # 2. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
     if client_id in active_users:
         # Si ya estaba activo, hereda el tiempo restante
@@ -251,7 +251,8 @@ async def websocket_endpoint(
 
     else:
         # Es un usuario completamente nuevo (o que recarga tras haber perdido el turno)
-        if len(active_users) < MAX_ACTIVE_USERS:
+        if len(active_users) < MAX_ACTIVE_USERS or is_privileged:
+            # Permitimos entrar si hay hueco OR si es administrador
             active_users.add(client_id)
             active_user_expires[client_id] = time.time() + SESSION_TIMEOUT
             active_user_tasks[client_id] = asyncio.create_task(
