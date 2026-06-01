@@ -42,13 +42,21 @@
     </style>
 </head>
 <body>
-    <div id="admin-login" style="max-width: 350px; margin: 15vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
-        <h2 style="margin-top: 0; color: #0f172a;">Acceso Admin</h2>
-        <input type="password" id="input-secret" placeholder="Contraseña..." style="display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
-        <button onclick="loginAdmin()" style="background: #0f172a; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold;">Entrar</button>
+    <div id="login-screen" style="display: block; max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+        <h2 style="margin-top: 0; color: #0f172a;">🔒 Acceso Admin</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Introduce el token de seguridad para gestionar las reservas.</p>
+        
+        <input type="password" id="secret-input" placeholder="Ej: 550e8400-e29b-..." style="display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace;">
+        
+        <button onclick="loginAdmin()" style="background: #0f172a; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+            Entrar al Panel
+        </button>
+        
+        <p id="login-error" style="color: #ef4444; font-size: 0.9rem; display: none; margin-top: 15px; font-weight: bold;">
+            Token incorrecto o conexión rechazada.
+        </p>
     </div>
-
-    <div id="admin-dashboard" style="display: none;">
+    <div id="dashboard-screen" style="display: none;">
 
         <div class="header">
             <div>
@@ -124,34 +132,65 @@
             }
         }
 
+        // 2. LÓGICA DE VISUALIZACIÓN INICIAL
+        if (!secret) {
+            // No hay token en absoluto: mostramos la pantalla de login
+            document.getElementById("login-screen").style.display = "block";
+        } else {
+            // Tenemos un token (ya sea de la URL o del localStorage), intentamos conectar
+            conectarDashboard(secret);
+        }
+
         let ws;
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
 
+        // 3. FUNCIÓN DEL BOTÓN "ENTRAR"
         function loginAdmin() {
-            secret = document.getElementById("input-secret").value;
-            if (!secret) return;
-
-            // Ocultamos el login y mostramos la interfaz principal
-            document.getElementById("admin-login").style.display = "none";
-            document.getElementById("admin-dashboard").style.display = "block";
-
-            iniciarConexion();
+            const inputSecret = document.getElementById("secret-input").value.trim();
+            if (!inputSecret) return;
+            
+            // Ocultamos el mensaje de error si lo hubiera
+            document.getElementById("login-error").style.display = "none";
+            
+            localStorage.setItem('taquillaSecret', inputSecret);
+            secret = inputSecret; // Actualizamos la global
+            
+            conectarDashboard(secret);
         }
 
-        if (secret) {
-            // Ocultamos el login y mostramos la interfaz principal
-            document.getElementById("admin-login").style.display = "none";
-            document.getElementById("admin-dashboard").style.display = "block";
+        // if (secret) {
+        //     // Ocultamos el login y mostramos la interfaz principal
+        //     document.getElementById("admin-login").style.display = "none";
+        //     document.getElementById("admin-dashboard").style.display = "block";
 
-            iniciarConexion();
-        }
+        //     iniciarConexion();
+        // }
 
-        function iniciarConexion() {
+        // 4. CONEXIÓN WEBSOCKET Y GESTIÓN DE ERRORES
+        function conectarDashboard(token) {
+            // Cambiamos la interfaz provisionalmente
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("dashboard-screen").style.display = "block";
+
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-            // El websocket se conecta usando el secreto que el usuario acaba de escribir
-            const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
+            const wsUrl = `${protocol}://${window.location.host}/ws/admin/${token}`;
+            
             ws = new WebSocket(wsUrl);
+
+            // Si el servidor nos rechaza la conexión (ej. token incorrecto), saltará este evento
+            ws.onclose = function(event) {
+                console.warn("Conexión WebSocket cerrada o rechazada.");
+                
+                // Volvemos a la pantalla de login
+                document.getElementById("dashboard-screen").style.display = "none";
+                document.getElementById("login-screen").style.display = "block";
+                document.getElementById("login-error").style.display = "block";
+                
+                // Purgamos el token malo del almacenamiento para que no se quede atascado en un bucle
+                localStorage.removeItem('taquillaSecret');
+                secret = null;
+            };
 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
@@ -166,14 +205,6 @@
                     if (document.getElementById("virtual-counter")) {
                         document.getElementById("virtual-counter").innerText = data.virtuales_procesados;
                     }
-                }
-            };
-
-            // Si la clave es incorrecta, FastAPI rechaza el WS
-            ws.onclose = function() {
-                if (document.getElementById("admin-dashboard").style.display === "block") {
-                    alert("Conexión rechazada. ¿Contraseña incorrecta?");
-                    window.location.reload();
                 }
             };
         }
