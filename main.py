@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
-MAX_ACTIVE_USERS = 1
+MAX_ACTIVE_USERS = 2
 SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
 active_user_tasks = {}  # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
@@ -152,10 +152,11 @@ async def broadcast_seats():
 
 
 async def process_queue():
+    global virtuales_procesados
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
         next_client = waiting_queue.pop(0)
         active_users.add(next_client)
-
+        virtuales_procesados += 1
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
         active_user_expires[next_client] = time.time() + SESSION_TIMEOUT
         active_user_tasks[next_client] = asyncio.create_task(
@@ -194,6 +195,7 @@ async def websocket_endpoint(
     secret: str = "", 
 ):
     await websocket.accept()
+    global virtuales_procesados
 
     # Comprobamos si tiene el pase VIP
     is_privileged = (secret == ADMIN_SECRET)
@@ -253,6 +255,8 @@ async def websocket_endpoint(
     else:
         # Es un usuario completamente nuevo (o que recarga tras haber perdido el turno)
         if len(active_users) < MAX_ACTIVE_USERS or is_privileged:
+            if not is_privileged:
+                virtuales_procesados += 1
             # Permitimos entrar si hay hueco OR si es administrador
             active_users.add(client_id)
             active_user_expires[client_id] = time.time() + SESSION_TIMEOUT
@@ -291,7 +295,6 @@ async def websocket_endpoint(
                 logger.info("Ping from client %s", client_id)
                 continue
             if payload.get("action") == "reset_counter":
-                    global virtuales_procesados
                     virtuales_procesados = 0
                     await broadcast_admin_stats()
             if client_id in active_users and payload.get("action") == "toggle":
