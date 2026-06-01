@@ -21,3 +21,8 @@ primary_region = 'ams'
   cpu_kind = 'shared'
   cpus = 1
   memory_mb = 256
+
+# --- Add this section ---
+[mounts]
+  source = 'claudia_data'
+  destination = '/app/data'
