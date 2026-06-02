@@ -113,7 +113,8 @@
 
     <script>
         const ASIENTOS_POR_FILA = 20;
-        
+        let ws;
+
         // 1. GESTIÓN DEL SECRETO Y OFUSCACIÓN DE URL
         let secret = localStorage.getItem('taquillaSecret');
         
@@ -141,10 +142,6 @@
             conectarDashboard(secret);
         }
 
-        let ws;
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsUrl = `${protocol}://${window.location.host}/ws/admin/${secret}`;
-
         // 3. FUNCIÓN DEL BOTÓN "ENTRAR"
         function loginAdmin() {
             const inputSecret = document.getElementById("secret-input").value.trim();
@@ -168,7 +165,7 @@
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             const wsUrl = `${protocol}://${window.location.host}/ws/admin/${token}`;
             
-            let ws = new WebSocket(wsUrl);
+            ws = new WebSocket(wsUrl);
 
             // Si el servidor nos rechaza la conexión (ej. token incorrecto), saltará este evento
             ws.onclose = function(event) {
