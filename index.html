@@ -500,7 +500,7 @@ function renderizarSesiones(seats) {
                     
                     if (seat.status === "free") {
                         btn.className = "seat free";
-                    } else if ((seat.status === "reserved" || seat.status === "reserving") && seat.is_mine) {
+                    } else if (seat.is_mine) {
                         btn.className = "seat my-seat"; 
                     } else {
                         btn.className = "seat reserved"; 
