@@ -307,6 +307,8 @@ async def websocket_endpoint(
                         (client_id,),
                     )
                     await db.commit()
+
+                await websocket.close()
                 await broadcast_seats()
 
             elif action == "toggle":
