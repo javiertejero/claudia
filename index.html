@@ -118,7 +118,7 @@
             </button>
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
             <button id="finalizar" onclick="finalizarReserva()" style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
-                ✅ Finalizar Reserva
+                ✅ Guardar Reserva
             </button>
         </div>
     </div>
@@ -589,6 +589,11 @@ function renderizarSesiones(seats) {
 
         function finalizarReserva() {
             if (!confirm("¿Seguro que has terminado? Saldrás de la sala y dejarás paso a la siguiente persona.")) return;
+            
+            // Enviar mensaje de finalización por websocket antes de cerrar
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: "finalizar" }));
+            }
             
             // Cerrar el websocket desencadena toda la limpieza en el servidor al instante
             if (ws) ws.close();

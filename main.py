@@ -65,13 +65,6 @@ async def init_db():
                             for i in range(1, ASIENTOS_POR_FILA * FILAS + 1 + 3)
                         ],
                     )
-                    # # Filas 1 a 11 (20 asientos) -> IDs 1 a 220
-                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
-                    # for seat_number in range(1, 244):
-                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
-                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
-                    # for seat_number in range(221, 244):
-                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
                 await db.commit()
         await db.commit()
 
@@ -292,12 +285,31 @@ async def websocket_endpoint(
                 payload = json.loads(data)
             except json.JSONDecodeError as exc:
                 logger.error("Error decoding json %s", exc)
-                continue  # Si no es un JSON válido, lo ignoramos
+                continue
+
             if payload.get("action") == "ping":
                 logger.info("Ping from client %s", client_id)
                 continue
-            if client_id in active_users and payload.get("action") == "toggle":
-                # Usamos .get() y validamos el tipo para evitar excepciones
+
+            if client_id not in active_users:
+                continue
+
+            action = payload.get("action")
+
+            if action == "finalizar":
+                async with aiosqlite.connect(DB_FILE) as db:
+                    await db.execute(
+                        """
+                        UPDATE seats 
+                        SET status = "reserved" 
+                        WHERE owner_id = ? AND status = "reserving"
+                    """,
+                        (client_id,),
+                    )
+                    await db.commit()
+                await broadcast_seats()
+
+            elif action == "toggle":
                 seat_num = payload.get("seat_number")
                 sess_time = payload.get("session_time")
                 if (
@@ -308,28 +320,29 @@ async def websocket_endpoint(
                     logger.warning(
                         "Invalid seat_num (%s) or sess_time (%s)", seat_num, sess_time
                     )
-                    continue  # Ignoramos cargas útiles manipuladas
+                    continue
+
                 user_full_name = active_users_names.get(client_id, "Desconocido")
 
                 async with aiosqlite.connect(DB_FILE) as db:
-                    # 1. Obtenemos cuántos tiene ANTES de intentar reservar
+                    # Contamos cuántos asientos tiene ya (reserved o reserving)
                     async with db.execute(
                         "SELECT COUNT(*) FROM seats WHERE owner_id = ?", (client_id,)
                     ) as cursor:
                         user_seats_count = (await cursor.fetchone())[0]
 
-                    # Intentamos reservar (Operación Atómica)
                     if user_seats_count < 6:
+                        # Intentamos marcar como 'reserving'
                         cursor = await db.execute(
                             """
                             UPDATE seats 
-                            SET status = "reserved", owner_id = ?, owner_name = ? 
+                            SET status = "reserving", owner_id = ?, owner_name = ? 
                             WHERE seat_number = ? AND session_time = ? AND status = "free"
                         """,
                             (client_id, user_full_name, seat_num, sess_time),
                         )
 
-                        # Si no pudo reservar (no estaba libre), vemos si intentaba liberar uno suyo
+                        # Si no pudo (no estaba libre), vemos si es para liberar uno suyo
                         if cursor.rowcount == 0:
                             await db.execute(
                                 """
@@ -340,7 +353,7 @@ async def websocket_endpoint(
                                 (seat_num, sess_time, client_id),
                             )
                     else:
-                        # Si ya tiene 6, intentamos liberar el asiento (solo funcionará si es suyo)
+                        # Si ya tiene 6, solo puede liberar
                         cursor = await db.execute(
                             """
                             UPDATE seats 
@@ -350,7 +363,6 @@ async def websocket_endpoint(
                             (seat_num, sess_time, client_id),
                         )
 
-                        # Si rowcount es 0, el asiento no era suyo. Estaba intentando coger el 7º.
                         if cursor.rowcount == 0:
                             await websocket.send_text(
                                 json.dumps(
@@ -362,12 +374,23 @@ async def websocket_endpoint(
                             )
 
                     await db.commit()
-                # Refrescamos la vista para todos los usuarios activos
                 await broadcast_seats()
 
     except WebSocketDisconnect:
-        # 2. CORRECCIÓN DE CONCURRENCIA: Solo limpiamos si la conexión que muere es la activa
         if active_connections.get(client_id) == websocket:
+            # Si se cierra sin finalizar, liberamos las que estaban en 'reserving'
+            async with aiosqlite.connect(DB_FILE) as db:
+                await db.execute(
+                    """
+                    UPDATE seats 
+                    SET status = "free", owner_id = NULL, owner_name = NULL 
+                    WHERE owner_id = ? AND status = "reserving"
+                """,
+                    (client_id,),
+                )
+                await db.commit()
+            await broadcast_seats()
+
             del active_connections[client_id]
             if client_id in active_users:
                 active_users.remove(client_id)
@@ -385,7 +408,6 @@ async def websocket_endpoint(
 @app.get("/admin")
 @app.get("/admin/{secret}")
 async def get_admin(secret: str | None = None):
-    # Si viene con secreto en la URL y es incorrecto, podemos rechazarlo rápido
     if secret and secret != ADMIN_SECRET:
         return {"error": "No autorizado"}
     return FileResponse("admin.html")
@@ -401,13 +423,11 @@ async def admin_websocket(websocket: WebSocket, secret: str):
     admin_connections.add(websocket)
 
     try:
-        # Enviar el estado actual nada más conectar
         seats = await get_all_seats()
         await websocket.send_text(json.dumps({"type": "admin_update", "seats": seats}))
         await broadcast_admin_stats()
 
         while True:
-            # Escuchamos los comandos del administrador
             data = await websocket.receive_text()
             try:
                 payload = json.loads(data)
@@ -416,24 +436,19 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     virtuales_procesados = 0
                     await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
-                    logger.warning(
-                        "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
-                    )
-
-                    # 1. Borrar tabla completa y recrearla con el init_db() original
+                    logger.warning("RESET TOTAL de la base de datos.")
                     async with aiosqlite.connect(DB_FILE) as db:
                         await db.execute("DROP TABLE IF EXISTS seats")
                         await db.commit()
                     await init_db()
 
-                    # 2. Expulsar a todos los clientes (Evitar estados corruptos)
                     for cid, ws_conn in list(active_connections.items()):
                         try:
                             await ws_conn.send_text(
                                 json.dumps(
                                     {
                                         "type": "timeout",
-                                        "message": "El administrador ha reiniciado el sistema. Todas las reservas se han borrado. Por favor, recarga la página para empezar de nuevo.",
+                                        "message": "El administrador ha reiniciado el sistema. Por favor, recarga.",
                                     }
                                 )
                             )
@@ -441,7 +456,6 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                         except Exception:
                             pass
 
-                    # 3. Limpiar toda la memoria del servidor
                     active_connections.clear()
                     active_users.clear()
                     waiting_queue.clear()
@@ -451,7 +465,6 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     active_user_tasks.clear()
                     active_user_expires.clear()
 
-                    # 4. Refrescar los paneles admin conectados
                     new_seats = await get_all_seats()
                     for admin_ws in list(admin_connections):
                         try:
@@ -470,7 +483,6 @@ async def admin_websocket(websocket: WebSocket, secret: str):
 
 
 async def broadcast_admin_stats():
-    """Envía el conteo de usuarios activos y en cola a los administradores."""
     if admin_connections:
         message = json.dumps(
             {
@@ -494,9 +506,7 @@ async def export_csv(secret: str):
 
     output = io.StringIO()
     writer = csv.writer(output)
-
     mitad = ASIENTOS_POR_FILA // 2
-
     writer.writerow(["Sesión", "Nombre y Apellidos", "Fila", "Butaca", "ID_Interno_BD"])
 
     async with aiosqlite.connect(DB_FILE) as db:
@@ -549,7 +559,6 @@ async def export_csv(secret: str):
                 writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
 
     output.seek(0)
-
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
