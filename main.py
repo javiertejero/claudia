@@ -285,8 +285,7 @@ async def websocket_endpoint(
                 payload = json.loads(data)
             except json.JSONDecodeError as exc:
                 logger.error("Error decoding json %s", exc)
-                continue
-
+                continue  # Si no es un JSON válido, lo ignoramos
             if payload.get("action") == "ping":
                 logger.info("Ping from client %s", client_id)
                 continue
@@ -428,11 +427,13 @@ async def admin_websocket(websocket: WebSocket, secret: str):
     admin_connections.add(websocket)
 
     try:
+        # Enviar el estado actual nada más conectar
         seats = await get_all_seats()
         await websocket.send_text(json.dumps({"type": "admin_update", "seats": seats}))
         await broadcast_admin_stats()
 
         while True:
+            # Escuchamos los comandos del administrador
             data = await websocket.receive_text()
             try:
                 payload = json.loads(data)
@@ -441,19 +442,24 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     virtuales_procesados = 0
                     await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
-                    logger.warning("RESET TOTAL de la base de datos.")
+                    logger.warning(
+                        "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
+                    )
+
+                    # 1. Borrar tabla completa y recrearla con el init_db() original
                     async with aiosqlite.connect(DB_FILE) as db:
                         await db.execute("DROP TABLE IF EXISTS seats")
                         await db.commit()
                     await init_db()
 
+                    # 2. Expulsar a todos los clientes (Evitar estados corruptos)
                     for cid, ws_conn in list(active_connections.items()):
                         try:
                             await ws_conn.send_text(
                                 json.dumps(
                                     {
                                         "type": "timeout",
-                                        "message": "El administrador ha reiniciado el sistema. Por favor, recarga.",
+                                        "message": "El administrador ha reiniciado el sistema. Todas las reservas se han borrado. Por favor, recarga la página para empezar de nuevo.",
                                     }
                                 )
                             )
@@ -461,6 +467,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                         except Exception:
                             pass
 
+                    # 3. Limpiar toda la memoria del servidor
                     active_connections.clear()
                     active_users.clear()
                     waiting_queue.clear()
@@ -470,6 +477,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     active_user_tasks.clear()
                     active_user_expires.clear()
 
+                    # 4. Refrescar los paneles admin conectados
                     new_seats = await get_all_seats()
                     for admin_ws in list(admin_connections):
                         try:
@@ -488,6 +496,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
 
 
 async def broadcast_admin_stats():
+    """Envía el conteo de usuarios activos y en cola a los administradores."""
     if admin_connections:
         message = json.dumps(
             {
