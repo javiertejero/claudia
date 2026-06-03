@@ -313,6 +313,7 @@ async def websocket_endpoint(
                     active_users.remove(client_id)
                 await process_queue()
                 await broadcast_seats()
+                break
 
             elif action == "toggle":
                 seat_num = payload.get("seat_number")
