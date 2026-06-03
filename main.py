@@ -309,6 +309,9 @@ async def websocket_endpoint(
                     await db.commit()
 
                 await websocket.close()
+                if client_id in active_users:
+                    active_users.remove(client_id)
+                await process_queue()
                 await broadcast_seats()
 
             elif action == "toggle":
@@ -391,14 +394,13 @@ async def websocket_endpoint(
                     (client_id,),
                 )
                 await db.commit()
-            await broadcast_seats()
 
             del active_connections[client_id]
             if client_id in active_users:
                 active_users.remove(client_id)
             if client_id in waiting_queue:
                 waiting_queue.remove(client_id)
-
+            await broadcast_seats()
             if client_id in active_user_tasks:
                 active_user_tasks[client_id].cancel()
                 del active_user_tasks[client_id]
