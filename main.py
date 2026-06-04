@@ -82,6 +82,19 @@ async def init_db():
         await db.commit()
 
 
+async def broadcast_queue_positions():
+    """Envía la posición en la cola a todos los clientes encolados."""
+    async with queue_lock:
+        for i, client_id in enumerate(waiting_queue):
+            if client_id in active_connections:
+                try:
+                    await active_connections[client_id].send_text(
+                        json.dumps({"type": "status", "status": "queued", "position": i + 1})
+                    )
+                except Exception as e:
+                    logger.error("Error enviando posición de cola a %s: %s", client_id, e)
+
+
 async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
@@ -139,6 +152,9 @@ async def cleanup_waiting_queue():
                 await broadcast_seats()
 
         await process_queue()
+        
+        # Enviamos las posiciones actualizadas de la cola a todos
+        await broadcast_queue_positions()
         await broadcast_admin_stats()
 
 
@@ -529,6 +545,7 @@ async def websocket_endpoint(
                 del active_user_tasks[client_id]
 
             await process_queue()
+            await broadcast_queue_positions()
             await broadcast_admin_stats()
 
 
