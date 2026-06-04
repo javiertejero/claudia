@@ -39,7 +39,49 @@
             
             .stat-card { padding: 1rem; }
         }
-    </style>
+
+        /* Panel de combinaciones */
+        #combo-panel {
+            display: none;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        #combo-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; color: #0f172a; }
+        #combo-search {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        #combo-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .combo-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            cursor: pointer;
+            font-size: 0.88rem;
+            color: #0f172a;
+            border: 1px solid transparent;
+            transition: background 0.15s, border-color 0.15s;
+            font-family: monospace;
+        }
+        .combo-item:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+</style>
 </head>
 <body>
     <div id="login-screen" style="display: block; max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
@@ -76,6 +118,9 @@
                 <button onclick="abrirTaquilla()" style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
                     🎫 Taquilla (Saltar Cola)
                 </button>
+                <button onclick="toggleComboPanel()" style="background: #7c3aed; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    📋 Combinaciones
+                </button>
                 <button id="export-btn">
                     📥 Exportar CSV
                 </button>
@@ -96,6 +141,13 @@
 
         <div class="stats-container" id="stats">
             </div>
+
+        <!-- Panel de combinaciones válidas -->
+        <div id="combo-panel">
+            <h2>📋 Combinaciones válidas (<span id="combo-count">0</span>)</h2>
+            <input id="combo-search" type="search" placeholder="Buscar combinación..." oninput="filtrarCombos(this.value)">
+            <div id="combo-list"></div>
+        </div>
 
         <div class="table-responsive">
             <table>
@@ -286,6 +338,57 @@
 
         function abrirTaquilla() {
             localStorage.setItem('taquillaSecret', secret);
+            window.open(`/`, '_blank');
+        }
+
+        // --- Panel de combinaciones ---
+        let allCombinations = [];
+
+        function toggleComboPanel() {
+            const panel = document.getElementById('combo-panel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                if (allCombinations.length === 0) cargarCombinaciones();
+            }
+        }
+
+        async function cargarCombinaciones() {
+            try {
+                const res = await fetch(`/admin/${secret}/combinations`);
+                const data = await res.json();
+                allCombinations = data.combinations || [];
+                document.getElementById('combo-count').innerText = allCombinations.length;
+                renderCombos(allCombinations);
+            } catch (e) {
+                console.error('Error cargando combinaciones', e);
+            }
+        }
+
+        function renderCombos(list) {
+            const container = document.getElementById('combo-list');
+            container.innerHTML = '';
+            list.forEach(combo => {
+                const el = document.createElement('div');
+                el.className = 'combo-item';
+                el.textContent = combo.replace('_', ' • ');
+                el.title = `Abrir taquilla para: ${combo}`;
+                el.addEventListener('click', () => abrirTaquillaConCombo(combo));
+                container.appendChild(el);
+            });
+        }
+
+        function filtrarCombos(query) {
+            const q = query.toLowerCase().replace(/[^a-z]/g, '');
+            const filtered = allCombinations.filter(c => c.replace('_','').includes(q));
+            renderCombos(filtered);
+        }
+
+        function abrirTaquillaConCombo(combo) {
+            localStorage.setItem('taquillaSecret', secret);
+            // Precargamos el combo en el sessionStorage para que index.html lo recoja
+            localStorage.setItem('taquilla_combo', combo);
             window.open(`/`, '_blank');
         }
 

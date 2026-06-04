@@ -106,6 +106,13 @@ async def admin_websocket(websocket: WebSocket, secret: str):
         state.admin_connections.remove(websocket)
 
 
+@admin_router.get("/admin/{secret}/combinations")
+async def list_combinations(secret: str):
+    if secret != state.ADMIN_SECRET:
+        return {"error": "No autorizado"}
+    return {"combinations": sorted(state.VALID_COMBINATIONS)}
+
+
 @admin_router.get("/admin/{secret}/export.csv")
 async def export_csv(secret: str):
     if secret != state.ADMIN_SECRET:

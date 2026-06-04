@@ -12,6 +12,8 @@
         input { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         button.btn-primary { background: #000; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button.btn-primary:hover { background: #333; }
+        button.btn-secondary { background: transparent; color: #64748b; border: 1px solid #cbd5e1; padding: 8px 12px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-top: 8px; }
+        button.btn-secondary:hover { background: #f1f5f9; }
 
         /* Interfaz principal */
         #app-screen { display: none; }
@@ -92,11 +94,12 @@
 
     <div id="login-screen">
         <h2>Datos de reserva</h2>
-        <input type="text" id="input-animal" placeholder="Animal" list="animals-list" required>
+        <input type="text" id="input-animal" placeholder="Animal" list="animals-list" required autofocus>
         <datalist id="animals-list"></datalist>
         <input type="text" id="input-adjetivo" placeholder="Adjetivo" list="adjectives-list" required>
         <datalist id="adjectives-list"></datalist>
         <button class="btn-primary" onclick="iniciarApp()">Entrar a la sala</button>
+        <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;" onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
     </div>
 
     <div id="app-screen">
@@ -191,6 +194,18 @@
                     header.innerHTML = "🎫 MODO TAQUILLA";
                     header.style.color = "#d97706";
                 }
+                // Si venimos de la lista de combinaciones del admin, pre-rellenar y autologin
+                const taquillaCombo = localStorage.getItem('taquilla_combo');
+                if (taquillaCombo) {
+                    localStorage.removeItem('taquilla_combo');
+                    const parts = taquillaCombo.split('_');
+                    if (parts.length === 2) {
+                        if (inputAnimal) inputAnimal.value = parts[0];
+                        if (inputAdjetivo) inputAdjetivo.value = parts[1];
+                        iniciarApp();
+                        return;
+                    }
+                }
                 if (inputAnimal) inputAnimal.value = "";
                 if (inputAdjetivo) inputAdjetivo.value = "";
                 
@@ -202,10 +217,36 @@
                 if (inputAnimal) inputAnimal.value = storedAnimal || "";
                 if (inputAdjetivo) inputAdjetivo.value = storedAdjetivo || "";
 
+                // Mostrar botón de cambio de identidad si ya tiene datos guardados
+                if (storedAnimal && storedAdjetivo) {
+                    const btnCambiar = document.getElementById('btn-cambiar-identidad');
+                    if (btnCambiar) btnCambiar.style.display = 'block';
+                }
+
                 // Si ya tiene los datos guardados, le saltamos la pantalla de login automáticamente
                 if (storedAnimal && storedAdjetivo) {
                     iniciarApp();
                 }
+            }
+
+            // Enter en cualquier campo envia el formulario si ambos están rellenos
+            [inputAnimal, inputAdjetivo].forEach(el => {
+                if (!el) return;
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const a = inputAnimal.value.trim();
+                        const b = inputAdjetivo.value.trim();
+                        if (a && b) iniciarApp();
+                        else if (!a) inputAnimal.focus();
+                        else inputAdjetivo.focus();
+                    }
+                });
+            });
+
+            // Foco inicial en animal (por si autofocus no funciona en todos los contextos)
+            if (inputAnimal && !inputAnimal.value) {
+                inputAnimal.focus();
             }
         });
 
@@ -262,6 +303,12 @@
                 solicitarWakeLock();
             }
         });
+
+        function cambiarIdentidad() {
+            localStorage.removeItem('animal');
+            localStorage.removeItem('adjetivo');
+            window.location.reload();
+        }
 
         function iniciarApp() {
             const animal = document.getElementById("input-animal").value.trim();

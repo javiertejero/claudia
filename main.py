@@ -256,7 +256,22 @@ async def websocket_endpoint(
         rate_limiting.register_successful_attempt(ip)
         client_id = normalized_id
     else:
-        client_id = identity.normalize_combination(client_id)
+        # Modo privilegiado: normalizar y validar igualmente (sin penalizar al rate limiter)
+        normalized_id = identity.normalize_combination(client_id)
+        if normalized_id not in state.VALID_COMBINATIONS:
+            await websocket.accept()
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": "La combinación de Animal y Adjetivo no es una credencial válida.",
+                    }
+                )
+            )
+            await websocket.close()
+            return
+        client_id = normalized_id
+
 
     await websocket.accept()
 
