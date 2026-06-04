@@ -1,3 +1,4 @@
+from random import shuffle
 import asyncio
 import logging
 import html
@@ -27,7 +28,19 @@ async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
         await asyncio.sleep(10)  # Ejecutar cada x segundos
-        logger.info("Trying to queue_lock... ")
+
+        if state.MAX_ACTIVE_USERS == 0:
+            # Significa que no se ha abierto el "par de timbales", por tanto la cola debe estar vacía.
+            # Si hay alguien en cola, lo echamos inmediatamente.
+            if state.waiting_queue:
+                logger.warning("[CLEANUP] MAX_ACTIVE_USERS es 0 pero hay %d clientes en cola. Randomizando asignaciones de asientos.", len(state.waiting_queue))
+                shuffle(state.waiting_queue)
+                await sync_queue_to_db()
+
+
+        # ============================================
+        # 1) LIMPIEZA DE CLIENTES DESCONECTADOS
+        # ============================================
         # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
         # Esto elimina eficazmente a los clientes "basura" de la cola.
         cleaned_queue = [

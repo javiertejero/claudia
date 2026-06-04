@@ -63,6 +63,7 @@ async def broadcast_admin_stats():
                 "active_users": len(state.active_users),
                 "queued_users": len(state.waiting_queue),
                 "virtuales_procesados": state.virtuales_procesados,
+                "max_active_users": state.MAX_ACTIVE_USERS,
             }
         )
         for admin_ws in list(state.admin_connections):

@@ -48,6 +48,12 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                 if payload.get("action") == "reset_counter":
                     state.virtuales_procesados = 0
                     await broadcast_admin_stats()
+                if payload.get("action") == "set_max_users":
+                    value = payload.get("value")
+                    if isinstance(value, int) and 0 <= value <= 10:
+                        state.MAX_ACTIVE_USERS = value
+                        logger.info("MAX_ACTIVE_USERS actualizado a %d por el administrador.", value)
+                        await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
                     logger.warning(
                         "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
