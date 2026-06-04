@@ -34,6 +34,7 @@ active_connections = {}  # {client_id: websocket}
 active_users_names = {}  # {client_id: "Nombre Apellido"}
 virtuales_procesados = 0
 waiting_queue = []
+queue_lock = asyncio.Lock()
 active_users = set()
 ASIENTOS_POR_FILA = 20
 FILAS = 12
@@ -158,20 +159,31 @@ async def broadcast_seats():
 
 async def sync_queue_to_db():
     """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
-    async with aiosqlite.connect(DB_FILE) as db:
-        await db.execute("DELETE FROM queue")
-        await db.executemany(
-            "INSERT INTO queue (client_id, position) VALUES (?, ?)",
-            [(client_id, i) for i, client_id in enumerate(waiting_queue)],
-        )
-        await db.commit()
+    async with queue_lock:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("DELETE FROM queue")
+            await db.executemany(
+                "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+            )
+            await db.commit()
 
 
 async def process_queue():
     global virtuales_procesados
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
-        next_client = waiting_queue.pop(0)
-        await sync_queue_to_db()
+        async with queue_lock:
+            if not waiting_queue:
+                break
+            next_client = waiting_queue.pop(0)
+            async with aiosqlite.connect(DB_FILE) as db:
+                await db.execute("DELETE FROM queue")
+                await db.executemany(
+                    "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                    [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                )
+                await db.commit()
+
         active_users.add(next_client)
         virtuales_procesados += 1
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
@@ -294,8 +306,15 @@ async def websocket_endpoint(
                 json.dumps({"type": "seats_update", "seats": sanitized_seats})
             )
         else:
-            waiting_queue.append(client_id)
-            await sync_queue_to_db()
+            async with queue_lock:
+                waiting_queue.append(client_id)
+                async with aiosqlite.connect(DB_FILE) as db:
+                    await db.execute("DELETE FROM queue")
+                    await db.executemany(
+                        "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                        [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                    )
+                    await db.commit()
             pos = len(waiting_queue)
             await websocket.send_text(
                 json.dumps({"type": "status", "status": "queued", "position": pos})
@@ -423,9 +442,16 @@ async def websocket_endpoint(
             del active_connections[client_id]
             if client_id in active_users:
                 active_users.remove(client_id)
-            if client_id in waiting_queue:
-                waiting_queue.remove(client_id)
-                await sync_queue_to_db()
+            async with queue_lock:
+                if client_id in waiting_queue:
+                    waiting_queue.remove(client_id)
+                    async with aiosqlite.connect(DB_FILE) as db:
+                        await db.execute("DELETE FROM queue")
+                        await db.executemany(
+                            "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                            [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                        )
+                        await db.commit()
             await broadcast_seats()
             if client_id in active_user_tasks:
                 active_user_tasks[client_id].cancel()
@@ -496,8 +522,11 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     # 3. Limpiar toda la memoria del servidor
                     active_connections.clear()
                     active_users.clear()
-                    waiting_queue.clear()
-                    await sync_queue_to_db()
+                    async with queue_lock:
+                        waiting_queue.clear()
+                        async with aiosqlite.connect(DB_FILE) as db:
+                            await db.execute("DELETE FROM queue")
+                            await db.commit()
                     active_users_names.clear()
                     for task in active_user_tasks.values():
                         task.cancel()
