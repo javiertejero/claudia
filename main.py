@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.responses import StreamingResponse
+from uvicorn.protocols.utils import ClientDisconnected
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
-SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
+SESSION_TIMEOUT = 30  # segundos para expiración de sesión de usuario
 active_user_tasks = {}  # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
 
@@ -123,7 +124,7 @@ async def cleanup_waiting_queue():
             for client_id in active_users
             if client_id in active_connections
         }
-        logger.info("Stats: %d cleaned_active_users, %d active_connections, %d waiting_queue", len(cleaned_active_users), len(active_connections), len(waiting_queue))
+        logger.info("Stats: %d cleaned_active_users, %d active_users, %d active_connections, %d waiting_queue", len(cleaned_active_users), len(active_users), len(active_connections), len(waiting_queue))
         if len(cleaned_active_users) < len(active_users):
             logger.info(
                 "[CLEANUP] Eliminados %d usuarios activos inactivos.",
@@ -236,7 +237,12 @@ async def broadcast_seats():
         if client_id in active_connections:
             sanitized_seats = sanitize_seats(seats, client_id)
             message = json.dumps({"type": "seats_update", "seats": sanitized_seats})
-            await active_connections[client_id].send_text(message)
+            try:
+                await active_connections[client_id].send_text(message)
+            except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+                logger.error("Error while broadcast_seats: %s, removing client_id %s", exc, client_id)
+                active_connections.pop(client_id)
+                active_users.remove(client_id)
 
     # 2. Enviar a administradores (datos completos en tiempo real)
     if admin_connections:
@@ -514,7 +520,8 @@ async def websocket_endpoint(
                     await db.commit()
                 await broadcast_seats()
 
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+        logger.error("Error while processing websocket_endpoint %s", exc)
         if active_connections.get(client_id) == websocket:
             # Si se cierra sin finalizar, liberamos las que estaban en 'reserving'
             async with aiosqlite.connect(DB_FILE) as db:
