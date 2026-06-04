@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.responses import StreamingResponse
+from uvicorn.protocols.utils import ClientDisconnected
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
-SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
+SESSION_TIMEOUT = 30  # segundos para expiración de sesión de usuario
 active_user_tasks = {}  # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
 
@@ -34,12 +35,14 @@ active_connections = {}  # {client_id: websocket}
 active_users_names = {}  # {client_id: "Nombre Apellido"}
 virtuales_procesados = 0
 waiting_queue = []
+queue_lock = asyncio.Lock()
 active_users = set()
 ASIENTOS_POR_FILA = 20
 FILAS = 12
 
 
 async def init_db():
+    global waiting_queue
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS seats (
@@ -51,6 +54,17 @@ async def init_db():
                 owner_name TEXT
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS queue (
+                client_id TEXT PRIMARY KEY,
+                position INTEGER
+            )
+        """)
+        # Cargar cola persistida
+        async with db.execute("SELECT client_id FROM queue ORDER BY position") as cursor:
+            rows = await cursor.fetchall()
+            waiting_queue = [r[0] for r in rows]
+
         # Inicializar 50 butacas por cada una de las 3 sesiones
         async with db.execute("SELECT COUNT(*) FROM seats") as cursor:
             count = await cursor.fetchone()
@@ -65,21 +79,102 @@ async def init_db():
                             for i in range(1, ASIENTOS_POR_FILA * FILAS + 1 + 3)
                         ],
                     )
-                    # # Filas 1 a 11 (20 asientos) -> IDs 1 a 220
-                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
-                    # for seat_number in range(1, 244):
-                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
-                    # # Fila 12 (23 asientos, sin pasillo) -> IDs 221 a 243
-                    # for seat_number in range(221, 244):
-                    #     await db.execute('INSERT INTO seats (seat_number, session_time) VALUES (?, ?)', (seat_number, sesion))
                 await db.commit()
         await db.commit()
+
+
+async def broadcast_queue_positions():
+    """Envía la posición en la cola a todos los clientes encolados."""
+    async with queue_lock:
+        for i, client_id in enumerate(waiting_queue):
+            if client_id in active_connections:
+                try:
+                    await active_connections[client_id].send_text(
+                        json.dumps({"type": "status", "status": "queued", "position": i + 1})
+                    )
+                except Exception as e:
+                    logger.error("Error enviando posición de cola a %s: %s", client_id, e)
+
+
+async def cleanup_waiting_queue():
+    """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
+    while True:
+        await asyncio.sleep(10)  # Ejecutar cada x segundos
+        logger.info("Trying to queue_lock... ")
+        # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
+        # Esto elimina eficazmente a los clientes "basura" de la cola.
+        cleaned_queue = [
+            client_id
+            for client_id in waiting_queue
+            if client_id in active_connections
+        ]
+        if len(cleaned_queue) < len(waiting_queue):
+            logger.info(
+                "[CLEANUP] Eliminados %d clientes inactivos de la cola.",
+                len(waiting_queue) - len(cleaned_queue),
+            )
+            waiting_queue[:] = cleaned_queue  # Actualiza la cola en memoria
+            await sync_queue_to_db()  # Sincroniza la cola limpia con la base de datos
+        else:
+            logger.info("No hay clientes desconectados, queue: %s", waiting_queue)
+
+        # Limpiar de active_users a clientes que ya no tienen conexión activa (evita que se queden bloqueados slots activos)
+        cleaned_active_users = {
+            client_id
+            for client_id in active_users
+            if client_id in active_connections
+        }
+        logger.info("Stats: %d cleaned_active_users, %d active_users, %d active_connections, %d waiting_queue", len(cleaned_active_users), len(active_users), len(active_connections), len(waiting_queue))
+        if len(cleaned_active_users) < len(active_users):
+            logger.info(
+                "[CLEANUP] Eliminados %d usuarios activos inactivos.",
+                len(active_users) - len(cleaned_active_users),
+            )
+            # Liberar las reservas en estado "reserving" de estos usuarios inactivos
+            for client_id in active_users - cleaned_active_users:
+                try:
+                    async with aiosqlite.connect(DB_FILE) as db:
+                        await db.execute(
+                            """
+                            UPDATE seats 
+                            SET status = "free", owner_id = NULL, owner_name = NULL 
+                            WHERE owner_id = ? AND status = "reserving"
+                        """,
+                            (client_id,),
+                        )
+                        await db.commit()
+                    if client_id in active_user_tasks:
+                        active_user_tasks[client_id].cancel()
+                        del active_user_tasks[client_id]
+                except Exception as e:
+                    logger.error("Error limpiando reservas de usuario inactivo %s: %s", client_id, e)
+            
+            active_users.clear()
+            active_users.update(cleaned_active_users)
+            await broadcast_seats()
+
+        await process_queue()
+        
+        # Enviamos las posiciones actualizadas de la cola a todos
+        await broadcast_queue_positions()
+        await broadcast_admin_stats()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    yield
+    # Iniciar la tarea de limpieza en segundo plano
+    cleanup_task = asyncio.create_task(cleanup_waiting_queue())
+    try:
+        yield
+    finally:
+        # Cancelar la tarea de limpieza cuando la aplicación se detiene
+        cleanup_task.cancel()
+        # 2. Catch the CancelledError gracefully
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -142,7 +237,12 @@ async def broadcast_seats():
         if client_id in active_connections:
             sanitized_seats = sanitize_seats(seats, client_id)
             message = json.dumps({"type": "seats_update", "seats": sanitized_seats})
-            await active_connections[client_id].send_text(message)
+            try:
+                await active_connections[client_id].send_text(message)
+            except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+                logger.error("Error while broadcast_seats: %s, removing client_id %s", exc, client_id)
+                active_connections.pop(client_id)
+                active_users.remove(client_id)
 
     # 2. Enviar a administradores (datos completos en tiempo real)
     if admin_connections:
@@ -151,10 +251,33 @@ async def broadcast_seats():
             await admin_ws.send_text(admin_message)
 
 
+async def sync_queue_to_db():
+    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
+    async with queue_lock:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("DELETE FROM queue")
+            await db.executemany(
+                "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+            )
+            await db.commit()
+
+
 async def process_queue():
     global virtuales_procesados
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
-        next_client = waiting_queue.pop(0)
+        async with queue_lock:
+            if not waiting_queue:
+                break
+            next_client = waiting_queue.pop(0)
+            async with aiosqlite.connect(DB_FILE) as db:
+                await db.execute("DELETE FROM queue")
+                await db.executemany(
+                    "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                    [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                )
+                await db.commit()
+
         active_users.add(next_client)
         virtuales_procesados += 1
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
@@ -277,7 +400,15 @@ async def websocket_endpoint(
                 json.dumps({"type": "seats_update", "seats": sanitized_seats})
             )
         else:
-            waiting_queue.append(client_id)
+            async with queue_lock:
+                waiting_queue.append(client_id)
+                async with aiosqlite.connect(DB_FILE) as db:
+                    await db.execute("DELETE FROM queue")
+                    await db.executemany(
+                        "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                        [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                    )
+                    await db.commit()
             pos = len(waiting_queue)
             await websocket.send_text(
                 json.dumps({"type": "status", "status": "queued", "position": pos})
@@ -288,6 +419,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
+
             try:
                 payload = json.loads(data)
             except json.JSONDecodeError as exc:
@@ -296,8 +428,32 @@ async def websocket_endpoint(
             if payload.get("action") == "ping":
                 logger.info("Ping from client %s", client_id)
                 continue
-            if client_id in active_users and payload.get("action") == "toggle":
-                # Usamos .get() y validamos el tipo para evitar excepciones
+
+            if client_id not in active_users:
+                continue
+
+            action = payload.get("action")
+
+            if action == "finalizar":
+                async with aiosqlite.connect(DB_FILE) as db:
+                    await db.execute(
+                        """
+                        UPDATE seats 
+                        SET status = "reserved" 
+                        WHERE owner_id = ? AND status = "reserving"
+                    """,
+                        (client_id,),
+                    )
+                    await db.commit()
+
+                await websocket.close()
+                if client_id in active_users:
+                    active_users.remove(client_id)
+                await process_queue()
+                await broadcast_seats()
+                break
+
+            elif action == "toggle":
                 seat_num = payload.get("seat_number")
                 sess_time = payload.get("session_time")
                 if (
@@ -308,28 +464,29 @@ async def websocket_endpoint(
                     logger.warning(
                         "Invalid seat_num (%s) or sess_time (%s)", seat_num, sess_time
                     )
-                    continue  # Ignoramos cargas útiles manipuladas
+                    continue
+
                 user_full_name = active_users_names.get(client_id, "Desconocido")
 
                 async with aiosqlite.connect(DB_FILE) as db:
-                    # 1. Obtenemos cuántos tiene ANTES de intentar reservar
+                    # Contamos cuántos asientos tiene ya (reserved o reserving)
                     async with db.execute(
                         "SELECT COUNT(*) FROM seats WHERE owner_id = ?", (client_id,)
                     ) as cursor:
                         user_seats_count = (await cursor.fetchone())[0]
 
-                    # Intentamos reservar (Operación Atómica)
                     if user_seats_count < 6:
+                        # Intentamos marcar como 'reserving'
                         cursor = await db.execute(
                             """
                             UPDATE seats 
-                            SET status = "reserved", owner_id = ?, owner_name = ? 
+                            SET status = "reserving", owner_id = ?, owner_name = ? 
                             WHERE seat_number = ? AND session_time = ? AND status = "free"
                         """,
                             (client_id, user_full_name, seat_num, sess_time),
                         )
 
-                        # Si no pudo reservar (no estaba libre), vemos si intentaba liberar uno suyo
+                        # Si no pudo (no estaba libre), vemos si es para liberar uno suyo
                         if cursor.rowcount == 0:
                             await db.execute(
                                 """
@@ -340,7 +497,7 @@ async def websocket_endpoint(
                                 (seat_num, sess_time, client_id),
                             )
                     else:
-                        # Si ya tiene 6, intentamos liberar el asiento (solo funcionará si es suyo)
+                        # Si ya tiene 6, solo puede liberar
                         cursor = await db.execute(
                             """
                             UPDATE seats 
@@ -350,7 +507,6 @@ async def websocket_endpoint(
                             (seat_num, sess_time, client_id),
                         )
 
-                        # Si rowcount es 0, el asiento no era suyo. Estaba intentando coger el 7º.
                         if cursor.rowcount == 0:
                             await websocket.send_text(
                                 json.dumps(
@@ -362,30 +518,49 @@ async def websocket_endpoint(
                             )
 
                     await db.commit()
-                # Refrescamos la vista para todos los usuarios activos
                 await broadcast_seats()
 
-    except WebSocketDisconnect:
-        # 2. CORRECCIÓN DE CONCURRENCIA: Solo limpiamos si la conexión que muere es la activa
+    except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+        logger.error("Error while processing websocket_endpoint %s", exc)
         if active_connections.get(client_id) == websocket:
+            # Si se cierra sin finalizar, liberamos las que estaban en 'reserving'
+            async with aiosqlite.connect(DB_FILE) as db:
+                await db.execute(
+                    """
+                    UPDATE seats 
+                    SET status = "free", owner_id = NULL, owner_name = NULL 
+                    WHERE owner_id = ? AND status = "reserving"
+                """,
+                    (client_id,),
+                )
+                await db.commit()
+
             del active_connections[client_id]
             if client_id in active_users:
                 active_users.remove(client_id)
-            if client_id in waiting_queue:
-                waiting_queue.remove(client_id)
-
+            async with queue_lock:
+                if client_id in waiting_queue:
+                    waiting_queue.remove(client_id)
+                    async with aiosqlite.connect(DB_FILE) as db:
+                        await db.execute("DELETE FROM queue")
+                        await db.executemany(
+                            "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+                            [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+                        )
+                        await db.commit()
+            await broadcast_seats()
             if client_id in active_user_tasks:
                 active_user_tasks[client_id].cancel()
                 del active_user_tasks[client_id]
 
             await process_queue()
+            await broadcast_queue_positions()
             await broadcast_admin_stats()
 
 
 @app.get("/admin")
 @app.get("/admin/{secret}")
 async def get_admin(secret: str | None = None):
-    # Si viene con secreto en la URL y es incorrecto, podemos rechazarlo rápido
     if secret and secret != ADMIN_SECRET:
         return {"error": "No autorizado"}
     return FileResponse("admin.html")
@@ -444,7 +619,11 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     # 3. Limpiar toda la memoria del servidor
                     active_connections.clear()
                     active_users.clear()
-                    waiting_queue.clear()
+                    async with queue_lock:
+                        waiting_queue.clear()
+                        async with aiosqlite.connect(DB_FILE) as db:
+                            await db.execute("DELETE FROM queue")
+                            await db.commit()
                     active_users_names.clear()
                     for task in active_user_tasks.values():
                         task.cancel()
@@ -494,9 +673,7 @@ async def export_csv(secret: str):
 
     output = io.StringIO()
     writer = csv.writer(output)
-
     mitad = ASIENTOS_POR_FILA // 2
-
     writer.writerow(["Sesión", "Nombre y Apellidos", "Fila", "Butaca", "ID_Interno_BD"])
 
     async with aiosqlite.connect(DB_FILE) as db:
@@ -549,7 +726,6 @@ async def export_csv(secret: str):
                 writer.writerow([session, owner, f"Fila {fila}", butaca, seat_id])
 
     output.seek(0)
-
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",

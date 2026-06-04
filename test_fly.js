@@ -21,9 +21,7 @@ export default function () {
     const nombre = `Usuario${__VU}`;
     const apellido = `Test${__ITER}`;
     
-    // IMPORTANTE: Cambia 127.0.0.1 por la IP/Dominio de tu VPS si pruebas en remoto
-    // Si pruebas con Caddy (HTTPS), cambia 'ws://' por 'wss://'
-    const url = `ws://127.0.0.1:8000/ws/${clientId}?nombre=${nombre}&apellido=${apellido}`;
+    const url = `wss://claudia.fly.dev/ws/${clientId}?nombre=${nombre}&apellido=${apellido}`;
 
     const res = ws.connect(url, {}, function (socket) {
         let isActive = false;
