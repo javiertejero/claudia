@@ -149,9 +149,7 @@ async def sync_queue_to_db():
 
 
 async def process_queue():
-    while (
-        len(state.active_users) < state.MAX_ACTIVE_USERS and state.waiting_queue
-    ):
+    while len(state.active_users) < state.MAX_ACTIVE_USERS and state.waiting_queue:
         async with state.queue_lock:
             if not state.waiting_queue:
                 break
@@ -167,9 +165,7 @@ async def process_queue():
         state.active_users.add(next_client)
         state.virtuales_procesados += 1
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
-        state.active_user_expires[next_client] = (
-            time.time() + state.SESSION_TIMEOUT
-        )
+        state.active_user_expires[next_client] = time.time() + state.SESSION_TIMEOUT
         state.active_user_tasks[next_client] = asyncio.create_task(
             expire_user_session(next_client)
         )
@@ -324,9 +320,7 @@ async def websocket_endpoint(
                 state.virtuales_procesados += 1
             # Permitimos entrar si hay hueco OR si es administrador
             state.active_users.add(client_id)
-            state.active_user_expires[client_id] = (
-                time.time() + state.SESSION_TIMEOUT
-            )
+            state.active_user_expires[client_id] = time.time() + state.SESSION_TIMEOUT
             state.active_user_tasks[client_id] = asyncio.create_task(
                 expire_user_session(client_id)
             )
@@ -406,9 +400,7 @@ async def websocket_endpoint(
                     )
                     continue
 
-                user_full_name = state.active_users_names.get(
-                    client_id, "Desconocido"
-                )
+                user_full_name = state.active_users_names.get(client_id, "Desconocido")
                 err_msg = await seats.toggle_seat(
                     client_id, seat_num, sess_time, user_full_name
                 )
@@ -441,9 +433,7 @@ async def websocket_endpoint(
                             "INSERT INTO queue (client_id, position) VALUES (?, ?)",
                             [
                                 (client_id, i)
-                                for i, client_id in enumerate(
-                                    state.waiting_queue
-                                )
+                                for i, client_id in enumerate(state.waiting_queue)
                             ],
                         )
                         await db.commit()
