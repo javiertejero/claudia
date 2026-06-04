@@ -1,7 +1,10 @@
+import os
 import time
 import logging
 
 logger = logging.getLogger(__name__)
+
+RATE_LIMIT = os.getenv("RATE_LIMIT", "True") != "False"
 
 # Rate Limiting por IP
 ip_blocks = {}  # { ip: {"failures": int, "blocked_until": float} }
@@ -15,6 +18,9 @@ def get_block_remaining(ip: str) -> int:
 
 
 def register_failed_attempt(ip: str):
+    if not RATE_LIMIT:
+        logger.info(f"Rate limiting desactivado. IP {ip} no bloqueada.")
+        return
     now = time.time()
     if ip not in ip_blocks:
         ip_blocks[ip] = {"failures": 0, "blocked_until": 0}

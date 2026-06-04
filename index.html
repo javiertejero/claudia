@@ -218,7 +218,8 @@
 </head>
 
 <body>
-
+    <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
+        onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
     <div id="login-screen">
         <h2>Datos de reserva</h2>
         <input type="text" id="input-animal" placeholder="Animal" list="animals-list" required autofocus>
@@ -230,8 +231,6 @@
 
     <div id="app-screen">
         <h2>Espectáculo de Danza</h2>
-        <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
-            onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
 
         <div id="sessions-container" style="display: none;"></div>
@@ -340,7 +339,6 @@
                 }
                 if (inputAnimal) inputAnimal.value = "";
                 if (inputAdjetivo) inputAdjetivo.value = "";
-
             } else {
                 // MODO NORMAL: Recuperar datos del localStorage
                 const storedAnimal = localStorage.getItem("animal");
