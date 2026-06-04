@@ -92,8 +92,10 @@
 
     <div id="login-screen">
         <h2>Datos de reserva</h2>
-        <input type="text" id="input-nombre" placeholder="Nombre" required>
-        <input type="text" id="input-apellido" placeholder="Apellido" required>
+        <input type="text" id="input-animal" placeholder="Animal" list="animals-list" required>
+        <datalist id="animals-list"></datalist>
+        <input type="text" id="input-adjetivo" placeholder="Adjetivo" list="adjectives-list" required>
+        <datalist id="adjectives-list"></datalist>
         <button class="btn-primary" onclick="iniciarApp()">Entrar a la sala</button>
     </div>
 
@@ -155,8 +157,33 @@
         // 2. Modificación visual, amnesia de datos y auto-login
         document.addEventListener("DOMContentLoaded", () => {
             const header = document.querySelector("#login-screen h1, #login-screen h2, #login-screen h3");
-            const inputNombre = document.getElementById("input-nombre");
-            const inputApellido = document.getElementById("input-apellido");
+            const inputAnimal = document.getElementById("input-animal");
+            const inputAdjetivo = document.getElementById("input-adjetivo");
+
+            // Cargar listas completas de palabras para el autocompletado datalist
+            fetch("/api/config")
+                .then(res => res.json())
+                .then(data => {
+                    const animalsList = document.getElementById("animals-list");
+                    const adjectivesList = document.getElementById("adjectives-list");
+                    if (animalsList && data.animals) {
+                        animalsList.innerHTML = "";
+                        data.animals.forEach(animal => {
+                            const option = document.createElement("option");
+                            option.value = animal;
+                            animalsList.appendChild(option);
+                        });
+                    }
+                    if (adjectivesList && data.adjectives) {
+                        adjectivesList.innerHTML = "";
+                        data.adjectives.forEach(adj => {
+                            const option = document.createElement("option");
+                            option.value = adj;
+                            adjectivesList.appendChild(option);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error al cargar config de autocompletado:", err));
 
             if (isTaquilla) {
                 // MODO TAQUILLA: Preparar UI especial y asegurar que no haya auto-login
@@ -164,19 +191,19 @@
                     header.innerHTML = "🎫 MODO TAQUILLA";
                     header.style.color = "#d97706";
                 }
-                if (inputNombre) inputNombre.value = "";
-                if (inputApellido) inputApellido.value = "";
+                if (inputAnimal) inputAnimal.value = "";
+                if (inputAdjetivo) inputAdjetivo.value = "";
                 
             } else {
                 // MODO NORMAL: Recuperar datos del localStorage
-                const storedNombre = localStorage.getItem("nombre");
-                const storedApellido = localStorage.getItem("apellido");
+                const storedAnimal = localStorage.getItem("animal");
+                const storedAdjetivo = localStorage.getItem("adjetivo");
                 
-                if (inputNombre) inputNombre.value = storedNombre || "";
-                if (inputApellido) inputApellido.value = storedApellido || "";
+                if (inputAnimal) inputAnimal.value = storedAnimal || "";
+                if (inputAdjetivo) inputAdjetivo.value = storedAdjetivo || "";
 
                 // Si ya tiene los datos guardados, le saltamos la pantalla de login automáticamente
-                if (storedNombre && storedApellido) {
+                if (storedAnimal && storedAdjetivo) {
                     iniciarApp();
                 }
             }
@@ -237,20 +264,17 @@
         });
 
         function iniciarApp() {
-            const nombre = document.getElementById("input-nombre").value.trim();
-            const apellido = document.getElementById("input-apellido").value.trim();
+            const animal = document.getElementById("input-animal").value.trim();
+            const adjetivo = document.getElementById("input-adjetivo").value.trim();
             
-            if (!nombre || !apellido) {
-                alert("Por favor, rellena nombre y apellido.");
+            if (!animal || !adjetivo) {
+                alert("Por favor, rellena animal y adjetivo.");
                 return;
             }
 
-            localStorage.setItem("nombre", nombre);
-            localStorage.setItem("apellido", apellido);
-
             if (!isTaquilla) {
-                localStorage.setItem("nombre", nombre);
-                localStorage.setItem("apellido", apellido);
+                localStorage.setItem("animal", animal);
+                localStorage.setItem("adjetivo", adjetivo);
             }
 
             document.getElementById("login-screen").style.display = "none";
@@ -259,7 +283,7 @@
             // ACTIVAMOS EL WAKE LOCK AQUÍ (aprovechando el clic del usuario)
             solicitarWakeLock();
 
-            conectarWebSocket(nombre, apellido);
+            conectarWebSocket(animal, adjetivo);
         }
         
         function tiempoAgotado(message) {
@@ -277,24 +301,15 @@
             `;
         }
 
-        function conectarWebSocket(nombre, apellido) {
-            // Generación forzada de ID único en cada persona para la Taquilla
-            if (isTaquilla) {
-                clientId = "taq-" + Math.random().toString(36).substr(2, 9);
-            } else {
-                clientId = localStorage.getItem("clientId");
-                if (!clientId) {
-                    clientId = "client-" + Math.random().toString(36).substr(2, 9);
-                    localStorage.setItem("clientId", clientId);
-                }
-            }
+        function conectarWebSocket(animal, adjetivo) {
+            clientId = `${animal.toLowerCase()}_${adjetivo.toLowerCase()}`;
 
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-            let wsUrl = `${protocol}://${window.location.host}/ws/${clientId}?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}`;
+            let wsUrl = `${protocol}://${window.location.host}/ws/${clientId}`;
 
             // Añadimos la llave maestra si existe
             if (isTaquilla) {
-                wsUrl += `&secret=${encodeURIComponent(adminSecret)}`;
+                wsUrl += `?secret=${encodeURIComponent(adminSecret)}`;
             }
             ws = new WebSocket(wsUrl);
             const banner = document.getElementById("status-banner");
@@ -329,6 +344,9 @@
                 // Manejador para el mensaje de error del backend
                 if (data.type === "error") {
                     alert(data.message);
+                    document.getElementById("login-screen").style.display = "block";
+                    document.getElementById("app-screen").style.display = "none";
+                    if (ws) ws.close();
                 }
 
                 if (data.type === "timeout") {
@@ -366,7 +384,7 @@ function renderizarSesiones(seats) {
             // 2. ACTUALIZAR WHATSAPP / PORTAPAPELES CON ANOMALÍA FILA 12
             const mySeats = seats.filter(seat => seat.is_mine);
             if (mySeatsCount > 0) {
-                const nombreCompleto = localStorage.getItem("nombre") + " " + localStorage.getItem("apellido");
+                const nombreCompleto = clientId;
                 let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
                 
                 // Ordenar por sesión y luego por número de asiento

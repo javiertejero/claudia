@@ -9,6 +9,8 @@ import math
 import os
 import time
 import uuid
+import hashlib
+import secrets
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -29,6 +31,76 @@ ADMIN_SECRET = os.getenv("CLAUDIA_SECRET", str(uuid.uuid4()))
 logger.debug("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
 admin_connections = set()
 
+# Listas estáticas para la generación de duplas de usuario
+ANIMALS = [
+    "tigre", "leon", "perro", "gato", "raton", "elefante", "jirafa", "mono", "oso", "lobo",
+    "zorro", "liebre", "tortuga", "buho", "aguila", "delfin", "tiburon", "ballena", "pulpo", "cangrejo",
+    "cebra", "cocodrilo", "koala", "panda", "camello", "caballo", "oveja", "cabra", "gallina", "pato",
+    "bisonte", "hipopotamo", "rinoceronte", "leopardo", "pantera", "guepardo", "ciervo", "alce", "ardilla", "castor"
+]
+
+ADJECTIVES = [
+    "miedica", "valiente", "rapido", "lento", "grande", "pequeño", "alegre", "triste", "astuto", "torpe",
+    "fuerte", "debil", "manso", "feroz", "tranquilo", "inquieto", "timido", "audaz", "fiel", "perezoso",
+    "curioso", "travieso", "amigable", "solitario", "generoso", "tacaño", "paciente", "impaciente", "educado", "grosero",
+    "limpio", "sucio", "ordenado", "desordenado", "inteligente", "despistado", "orgulloso", "humilde", "agradecido", "chistoso"
+]
+
+SYSTEM_SEED = None
+VALID_COMBINATIONS = set()
+NUM_VALID_COMBINATIONS = 300
+
+# Rate Limiting por IP
+ip_blocks = {}  # { ip: {"failures": int, "blocked_until": float} }
+
+def generate_valid_combinations(seed: str) -> set[str]:
+    all_combos = [f"{a}_{adj}" for a in ANIMALS for adj in ADJECTIVES]
+    # Hashing determinista para evitar dependencia en random.Random interno de Python
+    all_combos.sort(key=lambda c: hashlib.sha256(f"{c}:{seed}".encode()).hexdigest())
+    return set(all_combos[:NUM_VALID_COMBINATIONS])
+
+def get_block_remaining(ip: str) -> int:
+    if ip not in ip_blocks:
+        return 0
+    remaining = ip_blocks[ip]["blocked_until"] - time.time()
+    return max(0, int(remaining))
+
+def register_failed_attempt(ip: str):
+    now = time.time()
+    if ip not in ip_blocks:
+        ip_blocks[ip] = {"failures": 0, "blocked_until": 0}
+    ip_blocks[ip]["failures"] += 1
+    failures = ip_blocks[ip]["failures"]
+    if failures == 1:
+        duration = 60
+    elif failures == 2:
+        duration = 120
+    else:
+        duration = 180
+    ip_blocks[ip]["blocked_until"] = now + duration
+    logger.warning(f"IP {ip} falló validación. Fallos acumulados: {failures}. Bloqueada por {duration}s.")
+
+def register_successful_attempt(ip: str):
+    if ip in ip_blocks:
+        del ip_blocks[ip]
+        logger.info(f"IP {ip} validada exitosamente. Penalización reseteada.")
+
+def normalize_combination(client_id: str) -> str:
+    cleaned = client_id.strip().lower()
+    cleaned = cleaned.replace(" ", "_").replace("-", "_")
+    parts = [p.strip() for p in cleaned.split("_") if p.strip()]
+    if len(parts) == 2:
+        return f"{parts[0]}_{parts[1]}"
+    return cleaned
+
+def get_client_ip(websocket: WebSocket) -> str:
+    forwarded = websocket.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if websocket.client:
+        return websocket.client.host
+    return "127.0.0.1"
+
 
 # Estado en memoria
 active_connections = {}  # {client_id: websocket}
@@ -42,7 +114,8 @@ FILAS = 12
 
 
 async def init_db():
-    global waiting_queue
+    global waiting_queue, SYSTEM_SEED, VALID_COMBINATIONS
+    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS seats (
@@ -60,6 +133,28 @@ async def init_db():
                 position INTEGER
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
+        
+        # Cargar o generar la semilla persistida únicamente en la base de datos
+        async with db.execute("SELECT value FROM settings WHERE key = 'seed'") as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                SYSTEM_SEED = secrets.token_hex(16)
+                await db.execute("INSERT INTO settings (key, value) VALUES ('seed', ?)", (SYSTEM_SEED,))
+                await db.commit()
+                logger.info(f"Semilla generada y persistida en base de datos: {SYSTEM_SEED}")
+            else:
+                SYSTEM_SEED = row[0]
+                logger.info("Semilla cargada con éxito desde base de datos.")
+
+        # Generar las combinaciones de usuarios válidas deterministamente usando la semilla
+        VALID_COMBINATIONS = generate_valid_combinations(SYSTEM_SEED)
+
         # Cargar cola persistida
         async with db.execute("SELECT client_id FROM queue ORDER BY position") as cursor:
             rows = await cursor.fetchall()
@@ -309,21 +404,65 @@ async def get_index():
     return FileResponse("index.html")
 
 
+@app.get("/api/config")
+async def get_config():
+    return {
+        "animals": ANIMALS,
+        "adjectives": ADJECTIVES
+    }
+
+
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
     client_id: str,
-    nombre: str = "",
-    apellido: str = "",
     secret: str = "",
 ):
+    ip = get_client_ip(websocket)
+    is_privileged = secret == ADMIN_SECRET
+
+    if not is_privileged:
+        # 1. Comprobar si la IP está bloqueada
+        remaining = get_block_remaining(ip)
+        if remaining > 0:
+            await websocket.accept()
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": f"Esta IP está temporalmente bloqueada por intentos fallidos. Inténtalo de nuevo en {remaining} segundos.",
+                    }
+                )
+            )
+            await websocket.close()
+            return
+
+        # 2. Normalizar y Validar combinación
+        normalized_id = normalize_combination(client_id)
+        if normalized_id not in VALID_COMBINATIONS:
+            register_failed_attempt(ip)
+            await websocket.accept()
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "type": "error",
+                        "message": "La combinación de Animal y Adjetivo no es una credencial válida.",
+                    }
+                )
+            )
+            await websocket.close()
+            return
+
+        # Registro exitoso, limpiar fallos de la IP
+        register_successful_attempt(ip)
+        client_id = normalized_id
+    else:
+        client_id = normalize_combination(client_id)
+
     await websocket.accept()
     global virtuales_procesados
 
-    # Comprobamos si tiene el pase VIP
-    is_privileged = secret == ADMIN_SECRET
-
-    # 1. EXPULSIÓN DE MULTIPESTAÑA
+    # 3. EXPULSIÓN DE MULTIPESTAÑA
     if client_id in active_connections:
         old_ws = active_connections[client_id]
         try:
@@ -341,15 +480,12 @@ async def websocket_endpoint(
 
     active_connections[client_id] = websocket
 
-    nombre_limpio = html.escape(nombre[:50])
-    apellido_limpio = html.escape(apellido[:50])
+    nombre_limpio = html.escape(client_id[:50])
     # Distinguimos visualmente en el admin quién viene de la taquilla
     if is_privileged:
-        active_users_names[client_id] = (
-            f"[TAQ] {nombre_limpio} {apellido_limpio}".strip()
-        )
+        active_users_names[client_id] = f"[TAQ] {nombre_limpio}"
     else:
-        active_users_names[client_id] = f"{nombre_limpio} {apellido_limpio}".strip()
+        active_users_names[client_id] = nombre_limpio
 
     # 2. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
     if client_id in active_users:
