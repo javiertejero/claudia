@@ -59,7 +59,7 @@ async def init_db():
         )
         logger.info("Length of Valid Combinations: %s", len(state.VALID_COMBINATIONS))
         logger.info(
-            "First 5 valid combinations: %s", list(state.VALID_COMBINATIONS)[:5]
+            "First 5 valid combinations: %s", sorted(list(state.VALID_COMBINATIONS))[:5]
         )
 
         # Cargar cola persistida
