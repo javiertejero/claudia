@@ -4,7 +4,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-RATE_LIMIT = os.getenv("RATE_LIMIT", "True") != "False"
 
 # Rate Limiting por IP
 ip_blocks = {}  # { ip: {"failures": int, "blocked_until": float} }

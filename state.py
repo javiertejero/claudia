@@ -5,6 +5,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# For k6 stress testing (e.g. RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True uv run --frozen --env-file .env fastapi run main.py )
+DISABLE_IDENTITY_CHECKS = os.getenv("DISABLE_IDENTITY_CHECKS", "False") != "False"
+RATE_LIMIT = os.getenv("RATE_LIMIT", "True") != "False"
+
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 2
 SESSION_TIMEOUT = 30  # segundos para expiración de sesión de usuario

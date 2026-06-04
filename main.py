@@ -22,7 +22,6 @@ from admin import admin_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DISABLE_IDENTITY_CHECKS = os.getenv("DISABLE_IDENTITY_CHECKS", "False") != "False"
 
 async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
@@ -240,7 +239,7 @@ async def websocket_endpoint(
 
         # 2. Normalizar y Validar combinación
         normalized_id = identity.normalize_combination(client_id)
-        if not DISABLE_IDENTITY_CHECKS and normalized_id not in state.VALID_COMBINATIONS:
+        if not state.DISABLE_IDENTITY_CHECKS and normalized_id not in state.VALID_COMBINATIONS:
             rate_limiting.register_failed_attempt(ip)
             await websocket.accept()
             await websocket.send_text(
