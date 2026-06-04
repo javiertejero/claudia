@@ -99,57 +99,58 @@ async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
         await asyncio.sleep(10)  # Ejecutar cada x segundos
-        async with queue_lock:
-            # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
-            # Esto elimina eficazmente a los clientes "basura" de la cola.
-            cleaned_queue = [
-                client_id
-                for client_id in waiting_queue
-                if client_id in active_connections
-            ]
-            if len(cleaned_queue) < len(waiting_queue):
-                logger.info(
-                    "[CLEANUP] Eliminados %d clientes inactivos de la cola.",
-                    len(waiting_queue) - len(cleaned_queue),
-                )
-                waiting_queue[:] = cleaned_queue  # Actualiza la cola en memoria
-                await sync_queue_to_db()  # Sincroniza la cola limpia con la base de datos
-            else:
-                logger.info("No hay clientes desconectados, queue: %s", waiting_queue)
+        logger.info("Trying to queue_lock... ")
+        # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
+        # Esto elimina eficazmente a los clientes "basura" de la cola.
+        cleaned_queue = [
+            client_id
+            for client_id in waiting_queue
+            if client_id in active_connections
+        ]
+        if len(cleaned_queue) < len(waiting_queue):
+            logger.info(
+                "[CLEANUP] Eliminados %d clientes inactivos de la cola.",
+                len(waiting_queue) - len(cleaned_queue),
+            )
+            waiting_queue[:] = cleaned_queue  # Actualiza la cola en memoria
+            await sync_queue_to_db()  # Sincroniza la cola limpia con la base de datos
+        else:
+            logger.info("No hay clientes desconectados, queue: %s", waiting_queue)
 
-            # Limpiar de active_users a clientes que ya no tienen conexión activa (evita que se queden bloqueados slots activos)
-            cleaned_active_users = {
-                client_id
-                for client_id in active_users
-                if client_id in active_connections
-            }
-            if len(cleaned_active_users) < len(active_users):
-                logger.info(
-                    "[CLEANUP] Eliminados %d usuarios activos inactivos.",
-                    len(active_users) - len(cleaned_active_users),
-                )
-                # Liberar las reservas en estado "reserving" de estos usuarios inactivos
-                for client_id in active_users - cleaned_active_users:
-                    try:
-                        async with aiosqlite.connect(DB_FILE) as db:
-                            await db.execute(
-                                """
-                                UPDATE seats 
-                                SET status = "free", owner_id = NULL, owner_name = NULL 
-                                WHERE owner_id = ? AND status = "reserving"
-                            """,
-                                (client_id,),
-                            )
-                            await db.commit()
-                        if client_id in active_user_tasks:
-                            active_user_tasks[client_id].cancel()
-                            del active_user_tasks[client_id]
-                    except Exception as e:
-                        logger.error("Error limpiando reservas de usuario inactivo %s: %s", client_id, e)
-                
-                active_users.clear()
-                active_users.update(cleaned_active_users)
-                await broadcast_seats()
+        # Limpiar de active_users a clientes que ya no tienen conexión activa (evita que se queden bloqueados slots activos)
+        cleaned_active_users = {
+            client_id
+            for client_id in active_users
+            if client_id in active_connections
+        }
+        logger.info("Stats: %d cleaned_active_users, %d active_connections, %d waiting_queue", len(cleaned_active_users), len(active_connections), len(waiting_queue))
+        if len(cleaned_active_users) < len(active_users):
+            logger.info(
+                "[CLEANUP] Eliminados %d usuarios activos inactivos.",
+                len(active_users) - len(cleaned_active_users),
+            )
+            # Liberar las reservas en estado "reserving" de estos usuarios inactivos
+            for client_id in active_users - cleaned_active_users:
+                try:
+                    async with aiosqlite.connect(DB_FILE) as db:
+                        await db.execute(
+                            """
+                            UPDATE seats 
+                            SET status = "free", owner_id = NULL, owner_name = NULL 
+                            WHERE owner_id = ? AND status = "reserving"
+                        """,
+                            (client_id,),
+                        )
+                        await db.commit()
+                    if client_id in active_user_tasks:
+                        active_user_tasks[client_id].cancel()
+                        del active_user_tasks[client_id]
+                except Exception as e:
+                    logger.error("Error limpiando reservas de usuario inactivo %s: %s", client_id, e)
+            
+            active_users.clear()
+            active_users.update(cleaned_active_users)
+            await broadcast_seats()
 
         await process_queue()
         
@@ -412,6 +413,7 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
+
             try:
                 payload = json.loads(data)
             except json.JSONDecodeError as exc:
