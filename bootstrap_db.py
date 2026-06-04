@@ -53,6 +53,27 @@ async def init_db():
                 state.SYSTEM_SEED = row[0]
                 logger.info("Semilla cargada con éxito desde base de datos.")
 
+        # Cargar o generar la semilla persistida únicamente en la base de datos
+        async with db.execute(
+            "SELECT value FROM settings WHERE key = 'MAX_ACTIVE_USERS'"
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                state.MAX_ACTIVE_USERS = 2  # by default we start with 2
+                await db.execute(
+                    "INSERT INTO settings (key, value) VALUES ('MAX_ACTIVE_USERS', ?)",
+                    (state.MAX_ACTIVE_USERS,),
+                )
+                await db.commit()
+                logger.info(
+                    f"MAX_ACTIVE_USERS generado y persistido en base de datos: {state.MAX_ACTIVE_USERS}"
+                )
+            else:
+                state.MAX_ACTIVE_USERS = int(row[0])
+                logger.info("MAX_ACTIVE_USERS cargado con éxito desde base de datos.")
+
+
+
         # Generar las combinaciones de usuarios válidas deterministamente usando la semilla
         state.VALID_COMBINATIONS = generate_valid_combinations(
             state.SYSTEM_SEED, state.NUM_VALID_COMBINATIONS
@@ -87,3 +108,15 @@ async def init_db():
                     )
                 await db.commit()
         await db.commit()
+
+
+async def save_state_to_db(key: str, value: int):
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        await db.execute(
+            f"UPDATE settings SET value = ? WHERE key = '{key}'",
+            (value,),
+        )
+        await db.commit()
+        logger.info(
+            f"State {key} saved to database: {value}"
+        )

@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import state
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def get_block_remaining(ip: str) -> int:
 
 
 def register_failed_attempt(ip: str):
-    if not RATE_LIMIT:
+    if not state.RATE_LIMIT:
         logger.info(f"Rate limiting desactivado. IP {ip} no bloqueada.")
         return
     now = time.time()

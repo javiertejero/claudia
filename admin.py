@@ -1,3 +1,4 @@
+from bootstrap_db import save_state_to_db
 import csv
 import io
 import json
@@ -53,6 +54,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     if isinstance(value, int) and 0 <= value <= 10:
                         state.MAX_ACTIVE_USERS = value
                         logger.info("MAX_ACTIVE_USERS actualizado a %d por el administrador.", value)
+                        await save_state_to_db("MAX_ACTIVE_USERS", value)
                         await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
                     logger.warning(
