@@ -272,7 +272,6 @@ async def websocket_endpoint(
             return
         client_id = normalized_id
 
-
     await websocket.accept()
 
     # 3. EXPULSIÓN DE MULTIPESTAÑA

@@ -1,45 +1,117 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva de Butacas</title>
     <style>
-        body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; background: #f4f4f5; margin: 150px 0 0 0; }
-        
+        body {
+            font-family: system-ui, sans-serif;
+            text-align: center;
+            padding: 2rem;
+            background: #f4f4f5;
+            margin: 150px 0 0 0;
+        }
+
         /* Pantalla de login */
-        #login-screen { max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input { display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
-        button.btn-primary { background: #000; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button.btn-primary:hover { background: #333; }
-        button.btn-secondary { background: transparent; color: #64748b; border: 1px solid #cbd5e1; padding: 8px 12px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-top: 8px; }
-        button.btn-secondary:hover { background: #f1f5f9; }
+        #login-screen {
+            max-width: 400px;
+            margin: 10vh auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button.btn-primary {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.btn-primary:hover {
+            background: #333;
+        }
+
+        button.btn-secondary {
+            background: transparent;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            width: 100%;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        button.btn-secondary:hover {
+            background: #f1f5f9;
+        }
 
         /* Interfaz principal */
-        #app-screen { display: none; }
-        #status-banner { padding: 1rem; margin-bottom: 2rem; border-radius: 8px; font-weight: bold; }
-        .queued { background: #fef08a; color: #854d0e; }
-        .active { background: #bbf7d0; color: #166534; }
-        
-        .session-block { 
-            margin-bottom: 4rem; 
-            background: white; 
-            padding: 1.5rem; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-            overflow-x: auto; /* NUEVO: Permite deslizar a los lados en móvil */
+        #app-screen {
+            display: none;
         }
-        
-        .grid { 
-            display: grid; 
-            gap: 8px; 
-            max-width: 800px; 
-            min-width: 600px; /* NUEVO: Fuerza a que la cuadrícula no se aplaste más de esto */
-            margin: 0 auto 1.5rem auto; 
-            align-items: center; 
+
+        #status-banner {
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            font-weight: bold;
         }
-        .session-title { margin-top: 0; color: #333; }
-        
+
+        .queued {
+            background: #fef08a;
+            color: #854d0e;
+        }
+
+        .active {
+            background: #bbf7d0;
+            color: #166534;
+        }
+
+        .session-block {
+            margin-bottom: 4rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+            /* NUEVO: Permite deslizar a los lados en móvil */
+        }
+
+        .grid {
+            display: grid;
+            gap: 8px;
+            max-width: 800px;
+            min-width: 600px;
+            /* NUEVO: Fuerza a que la cuadrícula no se aplaste más de esto */
+            margin: 0 auto 1.5rem auto;
+            align-items: center;
+        }
+
+        .session-title {
+            margin-top: 0;
+            color: #333;
+        }
+
         .row-header {
             font-weight: bold;
             color: #475569;
@@ -47,49 +119,104 @@
             text-align: right;
             padding-right: 5px;
         }
-        .pasillo {
-            width: 100%; /* El div invisible que hará de pasillo */
-        }
-        .seat { padding: 12px 0; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; border: none; transition: background 0.1s; }
-        
-        .free { background: #e2e8f0; color: #475569; }
-        .free:hover { background: #cbd5e1; }
-        .reserved { background: #ef4444; color: white; cursor: not-allowed; }
-        .my-seat { background: #22c55e; color: white; } /* Verde para tus butacas */
-        .my-seat:hover { background: #16a34a; }
 
-        .escenario { max-width: 400px; margin: 0 auto; padding: 15px; background: #334155; color: white; font-weight: bold; border-radius: 4px; letter-spacing: 2px; }
+        .pasillo {
+            width: 100%;
+            /* El div invisible que hará de pasillo */
+        }
+
+        .seat {
+            padding: 12px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border: none;
+            transition: background 0.1s;
+        }
+
+        .free {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .free:hover {
+            background: #cbd5e1;
+        }
+
+        .reserved {
+            background: #ef4444;
+            color: white;
+            cursor: not-allowed;
+        }
+
+        .my-seat {
+            background: #22c55e;
+            color: white;
+        }
+
+        /* Verde para tus butacas */
+        .my-seat:hover {
+            background: #16a34a;
+        }
+
+        .escenario {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 15px;
+            background: #334155;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            letter-spacing: 2px;
+        }
 
         /* Contador flotante */
         #seat-counter {
-            display: none; /* Oculto por defecto */
+            display: none;
+            /* Oculto por defecto */
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #1e293b; /* Gris oscuro por defecto */
+            background: #1e293b;
+            /* Gris oscuro por defecto */
             color: white;
             padding: 10px 20px;
             border-radius: 30px;
             font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             z-index: 1000;
             transition: background 0.3s ease;
         }
 
         /* Animación divertida para el límite de butacas */
         @keyframes giro-limite {
-            0% { transform: scale(1) rotate(0deg); }
-            20% { transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
-            80% { transform: scale(1.1) rotate(370deg); box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
-            100% { transform: scale(1) rotate(360deg); }
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            20% {
+                transform: scale(1.1) rotate(-10deg);
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+            }
+
+            80% {
+                transform: scale(1.1) rotate(370deg);
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.9);
+            }
+
+            100% {
+                transform: scale(1) rotate(360deg);
+            }
         }
-        
+
         .anim-limite {
             /* Ejecuta la animación en 0.6 segundos */
             animation: giro-limite 0.6s ease-in-out;
         }
     </style>
 </head>
+
 <body>
 
     <div id="login-screen">
@@ -99,30 +226,35 @@
         <input type="text" id="input-adjetivo" placeholder="Adjetivo" list="adjectives-list" required>
         <datalist id="adjectives-list"></datalist>
         <button class="btn-primary" onclick="iniciarApp()">Entrar a la sala</button>
-        <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;" onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
     </div>
 
     <div id="app-screen">
         <h2>Espectáculo de Danza</h2>
+        <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
+            onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
-        
+
         <div id="sessions-container" style="display: none;"></div>
     </div>
 
     <div id="seat-counter">
         <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/6</div>
-        <div id="warning-maximo" style="display: none; font-size: 0.75rem; font-weight: bold; color: #ffedd5; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px;">
+        <div id="warning-maximo"
+            style="display: none; font-size: 0.75rem; font-weight: bold; color: #ffedd5; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px;">
             ⚠️ MÁXIMO ALCANZADO
         </div>
         <div id="action-buttons" style="display: none; gap: 8px; flex-direction: column;">
-            <button onclick="copiarReservas()" style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
+            <button onclick="copiarReservas()"
+                style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
                 📋 Copiar
             </button>
-            <button onclick="compartirWhatsApp()" style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
+            <button onclick="compartirWhatsApp()"
+                style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
                 💬 Enviar a WhatsApp
             </button>
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
-            <button id="finalizar" onclick="finalizarReserva()" style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
+            <button id="finalizar" onclick="finalizarReserva()"
+                style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
                 ✅ Guardar Reserva
             </button>
         </div>
@@ -136,10 +268,10 @@
 
         if (isTaquilla) {
             const taquillaChannel = new BroadcastChannel('taquilla_channel');
-            
+
             // Al abrir la pestaña, preguntamos si hay alguien más activo
             taquillaChannel.postMessage('ping');
-            
+
             taquillaChannel.onmessage = (event) => {
                 if (event.data === 'ping') {
                     // Otra pestaña nueva acaba de preguntar. Le decimos que nosotros somos la principal.
@@ -208,12 +340,12 @@
                 }
                 if (inputAnimal) inputAnimal.value = "";
                 if (inputAdjetivo) inputAdjetivo.value = "";
-                
+
             } else {
                 // MODO NORMAL: Recuperar datos del localStorage
                 const storedAnimal = localStorage.getItem("animal");
                 const storedAdjetivo = localStorage.getItem("adjetivo");
-                
+
                 if (inputAnimal) inputAnimal.value = storedAnimal || "";
                 if (inputAdjetivo) inputAdjetivo.value = storedAdjetivo || "";
 
@@ -270,7 +402,7 @@
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
                     console.log('Wake Lock activado: Pantalla encendida');
-                    
+
                     wakeLock.addEventListener('release', () => {
                         console.log('Wake Lock liberado por el sistema');
                         wakeLock = null; // Reseteamos para que el próximo clic lo vuelva a pedir
@@ -284,7 +416,7 @@
         // Función para liberarlo cuando ya no nos hace falta
         function liberarWakeLock() {
             if (wakeLock !== null) {
-                wakeLock.release().catch(() => {});
+                wakeLock.release().catch(() => { });
                 wakeLock = null;
             }
         }
@@ -305,6 +437,12 @@
         });
 
         function cambiarIdentidad() {
+            const warning1 = "⚠️ ¡ATENCIÓN! Vas a cerrar sesión y perder tu turno.\n\nEsta acción NO se puede deshacer.\n\n¿Estás completamente seguro?";
+            const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con el cierre de sesión?";
+
+            if (!confirm(warning1)) return;
+            if (!confirm(warning2)) return;
+
             localStorage.removeItem('animal');
             localStorage.removeItem('adjetivo');
             window.location.reload();
@@ -313,7 +451,7 @@
         function iniciarApp() {
             const animal = document.getElementById("input-animal").value.trim();
             const adjetivo = document.getElementById("input-adjetivo").value.trim();
-            
+
             if (!animal || !adjetivo) {
                 alert("Por favor, rellena animal y adjetivo.");
                 return;
@@ -326,13 +464,13 @@
 
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("app-screen").style.display = "block";
-            
+
             // ACTIVAMOS EL WAKE LOCK AQUÍ (aprovechando el clic del usuario)
             solicitarWakeLock();
 
             conectarWebSocket(animal, adjetivo);
         }
-        
+
         function tiempoAgotado(message) {
             if (tiempoAgotadoFlag) {
                 console.warn('tiempoAgotado invocado más de una vez, ignorando')
@@ -362,7 +500,7 @@
             const banner = document.getElementById("status-banner");
             const container = document.getElementById("sessions-container");
 
-            ws.onmessage = function(event) {
+            ws.onmessage = function (event) {
                 const data = JSON.parse(event.data);
 
                 if (data.type === "status") {
@@ -378,7 +516,7 @@
                         banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
                         document.getElementById("sessions-container").style.display = "block";
                         document.getElementById("seat-counter").style.display = "block";
-                        
+
                         // Iniciamos el reloj visual leyendo el dato del servidor
                         iniciarTemporizador(data.timeout);
                     }
@@ -387,7 +525,7 @@
                 if (data.type === "seats_update") {
                     renderizarSesiones(data.seats);
                 }
-                
+
                 // Manejador para el mensaje de error del backend
                 if (data.type === "error") {
                     alert(data.message);
@@ -415,16 +553,16 @@
                             <p style="font-size: 0.9em; color: #64748b; margin-top: 2rem;">Puedes continuar tu reserva en la pestaña nueva.</p>
                         </div>
                     `;
-                    
+
                     if (ws) ws.close(); // Cerramos la conexión desde el cliente por si acaso
                 }
             };
         }
 
-function renderizarSesiones(seats) {
+        function renderizarSesiones(seats) {
             const container = document.getElementById("sessions-container");
-            container.innerHTML = ""; 
-            
+            container.innerHTML = "";
+
             // 1. Calculamos butacas
             const mySeatsCount = seats.filter(seat => seat.is_mine).length;
 
@@ -433,7 +571,7 @@ function renderizarSesiones(seats) {
             if (mySeatsCount > 0) {
                 const nombreCompleto = clientId;
                 let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
-                
+
                 // Ordenar por sesión y luego por número de asiento
                 mySeats.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.seat_number - b.seat_number);
 
@@ -445,10 +583,10 @@ function renderizarSesiones(seats) {
                         const mitad = ASIENTOS_POR_FILA / 2;
                         fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
                         const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
-                        
+
                         // Izquierda pares descendentes, Derecha impares ascendentes
-                        butaca = posInRow < mitad 
-                            ? (mitad - posInRow) * 2 
+                        butaca = posInRow < mitad
+                            ? (mitad - posInRow) * 2
                             : ((posInRow - mitad) * 2) + 1;
                     } else {
                         // Tratamiento Fila 12 Invertida
@@ -470,15 +608,15 @@ function renderizarSesiones(seats) {
             const counterDiv = document.getElementById("seat-counter");
             const warningMax = document.getElementById("warning-maximo");
             document.getElementById("seat-count").innerText = mySeatsCount;
-            
+
             if (mySeatsCount >= 6) {
-                counterDiv.style.background = "#ef4444"; 
+                counterDiv.style.background = "#ef4444";
                 warningMax.style.display = "block";
             } else if (mySeatsCount > 0) {
-                counterDiv.style.background = "#22c55e"; 
+                counterDiv.style.background = "#22c55e";
                 warningMax.style.display = "none";
             } else {
-                counterDiv.style.background = "#1e293b"; 
+                counterDiv.style.background = "#1e293b";
                 warningMax.style.display = "none";
             }
 
@@ -493,7 +631,7 @@ function renderizarSesiones(seats) {
             sesiones.forEach(sesion => {
                 const block = document.createElement("div");
                 block.className = "session-block";
-                
+
                 const title = document.createElement("h3");
                 title.className = "session-title";
                 title.innerText = `Sesión ${sesion}`;
@@ -520,9 +658,9 @@ function renderizarSesiones(seats) {
                 asientosPorSesion[sesion].forEach((seat, index) => {
                     const isFila12 = seat.seat_number > 220;
                     let theatreSeatNum;
-                    
+
                     if (!isFila12) {
-                        const posInRow = index % ASIENTOS_POR_FILA; 
+                        const posInRow = index % ASIENTOS_POR_FILA;
 
                         if (posInRow === 0) {
                             const rowHeader = document.createElement("div");
@@ -541,12 +679,12 @@ function renderizarSesiones(seats) {
                         }
 
                         // Fórmula invertida
-                        theatreSeatNum = posInRow < mitad 
-                            ? (mitad - posInRow) * 2 
+                        theatreSeatNum = posInRow < mitad
+                            ? (mitad - posInRow) * 2
                             : ((posInRow - mitad) * 2) + 1;
                     } else {
                         const posInRow = seat.seat_number - 221;
-                        
+
                         if (posInRow === 0) {
                             const rowHeader = document.createElement("div");
                             rowHeader.className = "row-header";
@@ -562,29 +700,29 @@ function renderizarSesiones(seats) {
                     // Creación del botón de butaca
                     const btn = document.createElement("button");
                     btn.innerText = theatreSeatNum;
-                    
+
                     if (seat.status === "free") {
                         btn.className = "seat free";
                     } else if (seat.is_mine) {
-                        btn.className = "seat my-seat"; 
+                        btn.className = "seat my-seat";
                     } else {
-                        btn.className = "seat reserved"; 
+                        btn.className = "seat reserved";
                     }
 
                     btn.onclick = () => {
                         if (seat.status === "free") {
                             if (mySeatsCount >= 6) {
                                 const counterDiv = document.getElementById("seat-counter");
-                                
+
                                 // Reiniciamos la animación por si hace clics muy rápidos
                                 counterDiv.classList.remove("anim-limite");
                                 void counterDiv.offsetWidth; // Fuerza al navegador a repintar el elemento
                                 counterDiv.classList.add("anim-limite");
-                                
+
                                 // Opcional: Vibración háptica en móviles si está disponible
-                                if (navigator.vibrate) navigator.vibrate(200); 
-                                
-                                return; 
+                                if (navigator.vibrate) navigator.vibrate(200);
+
+                                return;
                             }
                             ws.send(JSON.stringify({ action: "toggle", seat_number: seat.seat_number, session_time: sesion }));
                         } else if (seat.is_mine) {
@@ -608,7 +746,7 @@ function renderizarSesiones(seats) {
         }
         function copiarReservas() {
             if (!textoReservasFormateado) return;
-            
+
             // API nativa del navegador para copiar al portapapeles
             navigator.clipboard.writeText(textoReservasFormateado).then(() => {
                 // Feedback visual rápido
@@ -623,7 +761,7 @@ function renderizarSesiones(seats) {
 
         function compartirWhatsApp() {
             if (!textoReservasFormateado) return;
-            
+
             // Genera un enlace a WhatsApp con el texto pre-rellenado (URL encodeado)
             const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoReservasFormateado)}`;
             window.open(url, '_blank');
@@ -632,13 +770,13 @@ function renderizarSesiones(seats) {
         function iniciarTemporizador(segundos) {
             clearInterval(timerInterval);
             // Calculamos la hora exacta en la que se acaba el tiempo
-            const endTime = Date.now() + (segundos * 1000); 
+            const endTime = Date.now() + (segundos * 1000);
             const display = document.getElementById("timer-display");
-            
+
             timerInterval = setInterval(() => {
                 // Comparamos el momento actual con el final esperado
                 const tiempoRestante = Math.round((endTime - Date.now()) / 1000);
-                
+
                 if (tiempoRestante <= 0) {
                     clearInterval(timerInterval);
                     display.innerText = `⏱️ 00:00`;
@@ -654,21 +792,21 @@ function renderizarSesiones(seats) {
 
         function finalizarReserva() {
             if (!confirm("¿Seguro que has terminado? Saldrás de la sala y dejarás paso a la siguiente persona.")) return;
-            
+
             // Enviar mensaje de finalización por websocket antes de cerrar
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ action: "finalizar" }));
             }
-            
+
             // Cerrar el websocket desencadena toda la limpieza en el servidor al instante
             if (ws) ws.close();
             clearInterval(timerInterval);
-            finalizado = true;            
+            finalizado = true;
             liberarWakeLock(); // liberamos wake lock
 
             document.getElementById("finalizar").style.display = "none";
 
-            const footerTaq = isTaquilla 
+            const footerTaq = isTaquilla
                 ? `<button onclick="window.location.reload()" style="margin-top: 1.5rem; background: #d97706; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Siguiente Espectador ➔</button>`
                 : `<p>Ya puedes cerrar esta ventana.</p>`;
 
@@ -690,4 +828,5 @@ function renderizarSesiones(seats) {
         }, 10000);
     </script>
 </body>
+
 </html>
