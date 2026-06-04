@@ -82,11 +82,10 @@ async def init_db():
         await db.commit()
 
 
-@asynccontextmanager
 async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
-        await asyncio.sleep(30)  # Ejecutar cada 30 segundos
+        await asyncio.sleep(10)  # Ejecutar cada x segundos
         async with queue_lock:
             # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
             # Esto elimina eficazmente a los clientes "basura" de la cola.
@@ -102,6 +101,8 @@ async def cleanup_waiting_queue():
                 )
                 waiting_queue[:] = cleaned_queue  # Actualiza la cola en memoria
                 await sync_queue_to_db()  # Sincroniza la cola limpia con la base de datos
+            else:
+                logger.info("No hay clientes desconectados, queue: %s", waiting_queue)
         await broadcast_admin_stats()
 
 
@@ -115,7 +116,11 @@ async def lifespan(app: FastAPI):
     finally:
         # Cancelar la tarea de limpieza cuando la aplicación se detiene
         cleanup_task.cancel()
-        await cleanup_task
+        # 2. Catch the CancelledError gracefully
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
