@@ -40,6 +40,7 @@ FILAS = 12
 
 
 async def init_db():
+    global waiting_queue
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS seats (
@@ -51,6 +52,17 @@ async def init_db():
                 owner_name TEXT
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS queue (
+                client_id TEXT PRIMARY KEY,
+                position INTEGER
+            )
+        """)
+        # Cargar cola persistida
+        async with db.execute("SELECT client_id FROM queue ORDER BY position") as cursor:
+            rows = await cursor.fetchall()
+            waiting_queue = [r[0] for r in rows]
+
         # Inicializar 50 butacas por cada una de las 3 sesiones
         async with db.execute("SELECT COUNT(*) FROM seats") as cursor:
             count = await cursor.fetchone()
@@ -144,10 +156,22 @@ async def broadcast_seats():
             await admin_ws.send_text(admin_message)
 
 
+async def sync_queue_to_db():
+    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM queue")
+        await db.executemany(
+            "INSERT INTO queue (client_id, position) VALUES (?, ?)",
+            [(client_id, i) for i, client_id in enumerate(waiting_queue)],
+        )
+        await db.commit()
+
+
 async def process_queue():
     global virtuales_procesados
     while len(active_users) < MAX_ACTIVE_USERS and waiting_queue:
         next_client = waiting_queue.pop(0)
+        await sync_queue_to_db()
         active_users.add(next_client)
         virtuales_procesados += 1
         # INICIAMOS SU CRONÓMETRO EN EL SERVIDOR
@@ -271,6 +295,7 @@ async def websocket_endpoint(
             )
         else:
             waiting_queue.append(client_id)
+            await sync_queue_to_db()
             pos = len(waiting_queue)
             await websocket.send_text(
                 json.dumps({"type": "status", "status": "queued", "position": pos})
@@ -400,6 +425,7 @@ async def websocket_endpoint(
                 active_users.remove(client_id)
             if client_id in waiting_queue:
                 waiting_queue.remove(client_id)
+                await sync_queue_to_db()
             await broadcast_seats()
             if client_id in active_user_tasks:
                 active_user_tasks[client_id].cancel()
@@ -471,6 +497,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     active_connections.clear()
                     active_users.clear()
                     waiting_queue.clear()
+                    await sync_queue_to_db()
                     active_users_names.clear()
                     for task in active_user_tasks.values():
                         task.cancel()
