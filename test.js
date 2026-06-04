@@ -4,8 +4,8 @@ import { check } from 'k6';
 // Configuración del escenario de carga
 export const options = {
     stages: [
-        { duration: '30s', target: 100 }, // Rampa de subida rápida a 100 usuarios simultáneos
-        { duration: '2m', target: 100 },  // Mantenemos la presión durante 2 minutos
+        { duration: '10s', target: 150 }, // Rampa de subida rápida a 150 usuarios simultáneos (worst case parece ser 243 x 3 sesiones / 6 butacas por familias = 121.5)
+        { duration: '10m', target: 150 },  // Mantenemos la presión durante 10 minutos
         { duration: '30s', target: 0 },   // Rampa de bajada para cerrar limpiamente
     ],
 };
@@ -64,6 +64,7 @@ export default function () {
                 } else {
                     // Ya hemos elegido 3 butacas, simulamos pulsar "Finalizar Reserva"
                     socket.setTimeout(function() {
+                        socket.send(JSON.stringify({ action: "finalizar" }));
                         socket.close();
                     }, 1000);
                 }

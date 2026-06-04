@@ -16,6 +16,10 @@ primary_region = 'ams'
   min_machines_running = 0
   processes = ['app']
 
+[http_service.concurrency]
+    type = "connections"
+    soft_limit = 200  # what is actually important is to ensure we don't scale
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
@@ -26,3 +30,7 @@ primary_region = 'ams'
 [mounts]
   source = 'claudia_data'
   destination = '/app/data'
+
+
+# [deploy]
+#   strategy = "immediate"  # en caso de despliegue causamos downtime, sería interesante para implementar "restore queue"

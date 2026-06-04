@@ -4,7 +4,7 @@ import { check } from 'k6';
 // Configuración del escenario de carga
 export const options = {
     stages: [
-        { duration: '10s', target: 150 }, // Rampa de subida rápida a 150 usuarios simultáneos ()
+        { duration: '10s', target: 150 }, // Rampa de subida rápida a 150 usuarios simultáneos (worst case parece ser 243 x 3 sesiones / 6 butacas por familias = 121.5)
         { duration: '10m', target: 150 },  // Mantenemos la presión durante 10 minutos
         { duration: '30s', target: 0 },   // Rampa de bajada para cerrar limpiamente
     ],
@@ -21,9 +21,6 @@ export default function () {
     const nombre = `Usuario${__VU}`;
     const apellido = `Test${__ITER}`;
     
-    // IMPORTANTE: Cambia 127.0.0.1 por la IP/Dominio de tu VPS si pruebas en remoto
-    // Si pruebas con Caddy (HTTPS), cambia 'ws://' por 'wss://'
-    // const url = `ws://127.0.0.1:8000/ws/${clientId}?nombre=${nombre}&apellido=${apellido}`;
     const url = `wss://claudia.fly.dev/ws/${clientId}?nombre=${nombre}&apellido=${apellido}`;
 
     const res = ws.connect(url, {}, function (socket) {
@@ -65,6 +62,7 @@ export default function () {
                 } else {
                     // Ya hemos elegido 3 butacas, simulamos pulsar "Finalizar Reserva"
                     socket.setTimeout(function() {
+                        socket.send(JSON.stringify({ action: "finalizar" }));
                         socket.close();
                     }, 1000);
                 }
