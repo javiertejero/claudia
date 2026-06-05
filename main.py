@@ -24,25 +24,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def handle_shutdown_signal(signum, frame):
-    """
-    Signal handler that flips the global shutdown flag.
-    """
-    logger.warning(f"\n[Signal {signum} caught] Shutting down gracefully...")
-    state.IS_SHUTTING_DOWN = True
-
-
-# 1. Catch SIGINT (Ctrl+C)
-signal.signal(signal.SIGINT, handle_shutdown_signal)
-
-# 2. Catch SIGTERM (Standard termination signal)
-signal.signal(signal.SIGTERM, handle_shutdown_signal)
-
 
 async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
         await asyncio.sleep(10)  # Ejecutar cada x segundos
+        if state.IS_SHUTTING_DOWN:
+            logger.info("[CLEANUP] Aplicación apagándose, saliendo del cleanup.")
+            return
 
         if state.MAX_ACTIVE_USERS == 0:
             # Significa que no se ha abierto el "par de timbales", por tanto la cola debe estar vacía.
@@ -120,6 +109,26 @@ async def cleanup_waiting_queue():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1. Capture Uvicorn's original signal handlers
+    original_sigint = signal.getsignal(signal.SIGINT)
+    original_sigterm = signal.getsignal(signal.SIGTERM)
+
+    def shutdown_interceptor(signum, frame):
+        # 2. Flip our flag IMMEDIATELY upon receiving the signal
+        state.IS_SHUTTING_DOWN = True
+        print(f"\n[Interceptor] Signal {signum} caught! Flag flipped.")
+        
+        # 3. Hand control back to Uvicorn so it can gracefully close connections
+        if signum == signal.SIGINT and callable(original_sigint):
+            original_sigint(signum, frame)
+        elif signum == signal.SIGTERM and callable(original_sigterm):
+            original_sigterm(signum, frame)
+
+    # 4. Override the signals with our interceptor
+    signal.signal(signal.SIGINT, shutdown_interceptor)
+    signal.signal(signal.SIGTERM, shutdown_interceptor)
+
+
     await bootstrap_db.init_db()
     # Iniciar la tarea de limpieza en segundo plano
     cleanup_task = asyncio.create_task(cleanup_waiting_queue())
@@ -470,6 +479,11 @@ async def websocket_endpoint(
                 await broadcast.broadcast_seats()
 
     except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+        # Protect your disconnect logic!
+        if state.IS_SHUTTING_DOWN:
+            logger.warning("Server is shutting down. Skipping normal disconnect logic.")
+            # Let it die peacefully without triggering your DB updates/alerts
+            return
         logger.error("Error while processing websocket_endpoint %s", exc)
         if state.active_connections.get(client_id) == websocket:
             # Si se cierra sin finalizar, liberamos las que estaban en 'reserving'

@@ -21,6 +21,11 @@ async def broadcast_seats():
             try:
                 await state.active_connections[client_id].send_text(message)
             except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
+                if state.IS_SHUTTING_DOWN:
+                    logger.warning(
+                        "Server is shutting down. Skipping normal disconnect logic."
+                    )
+                    return
                 logger.error(
                     "Error while broadcast_seats: %s, removing client_id %s",
                     exc,

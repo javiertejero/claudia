@@ -229,6 +229,7 @@ ADJECTIVES = [
     "noble",
     "leal",
     "bondadosa",
+    "galactica",
 ]
 
 assert len(set(ANIMALS)) == len(ANIMALS)
