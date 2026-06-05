@@ -8,3 +8,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "fastapi[standard]>=0.136.1"
 ]
+
+[tool.ruff.lint]
+# Add "I" (isort) to the default rules (which are "E" and "F")
+extend-select = ["I"]

@@ -1,7 +1,9 @@
 import json
 import logging
+
 from fastapi import WebSocketDisconnect
 from uvicorn.protocols.utils import ClientDisconnected
+
 import state
 from seats import get_all_seats, sanitize_seats
 

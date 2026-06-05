@@ -1,6 +1,6 @@
-import os
-import time
 import logging
+import time
+
 import state
 
 logger = logging.getLogger(__name__)

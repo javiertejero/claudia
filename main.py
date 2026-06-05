@@ -1,27 +1,42 @@
-from random import shuffle
 import asyncio
-import logging
 import html
 import json
-import os
+import logging
+import signal
 import time
+from contextlib import asynccontextmanager
+from random import shuffle
 
+import aiosqlite
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from uvicorn.protocols.utils import ClientDisconnected
-from contextlib import asynccontextmanager
-import aiosqlite
 
-import state
-import rate_limiting
-import identity
-import seats
 import bootstrap_db
 import broadcast
+import identity
+import rate_limiting
+import seats
+import state
 from admin import admin_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def handle_shutdown_signal(signum, frame):
+    """
+    Signal handler that flips the global shutdown flag.
+    """
+    logger.warning(f"\n[Signal {signum} caught] Shutting down gracefully...")
+    state.IS_SHUTTING_DOWN = True
+
+
+# 1. Catch SIGINT (Ctrl+C)
+signal.signal(signal.SIGINT, handle_shutdown_signal)
+
+# 2. Catch SIGTERM (Standard termination signal)
+signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 
 async def cleanup_waiting_queue():
@@ -33,10 +48,12 @@ async def cleanup_waiting_queue():
             # Significa que no se ha abierto el "par de timbales", por tanto la cola debe estar vacía.
             # Si hay alguien en cola, lo echamos inmediatamente.
             if state.waiting_queue:
-                logger.warning("[CLEANUP] MAX_ACTIVE_USERS es 0 pero hay %d clientes en cola. Randomizando asignaciones de asientos.", len(state.waiting_queue))
+                logger.warning(
+                    "[CLEANUP] MAX_ACTIVE_USERS es 0 pero hay %d clientes en cola. Randomizando asignaciones de asientos.",
+                    len(state.waiting_queue),
+                )
                 shuffle(state.waiting_queue)
                 await sync_queue_to_db()
-
 
         # ============================================
         # 1) LIMPIEZA DE CLIENTES DESCONECTADOS
@@ -152,6 +169,11 @@ async def expire_user_session(client_id: str):
 
 async def sync_queue_to_db():
     """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
+    if state.IS_SHUTTING_DOWN:
+        logger.warning(
+            "[SYNC_QUEUE] Aplicación apagándose, no se sincroniza la cola a la BD."
+        )
+        return
     async with state.queue_lock:
         async with aiosqlite.connect(state.DB_FILE) as db:
             await db.execute("DELETE FROM queue")
@@ -252,7 +274,10 @@ async def websocket_endpoint(
 
         # 2. Normalizar y Validar combinación
         normalized_id = identity.normalize_combination(client_id)
-        if not state.DISABLE_IDENTITY_CHECKS and normalized_id not in state.VALID_COMBINATIONS:
+        if (
+            not state.DISABLE_IDENTITY_CHECKS
+            and normalized_id not in state.VALID_COMBINATIONS
+        ):
             rate_limiting.register_failed_attempt(ip)
             await websocket.accept()
             await websocket.send_text(

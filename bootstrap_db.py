@@ -1,7 +1,9 @@
+import logging
 import os
 import secrets
-import logging
+
 import aiosqlite
+
 import state
 from identity import generate_valid_combinations
 
@@ -72,8 +74,6 @@ async def init_db():
                 state.MAX_ACTIVE_USERS = int(row[0])
                 logger.info("MAX_ACTIVE_USERS cargado con éxito desde base de datos.")
 
-
-
         # Generar las combinaciones de usuarios válidas deterministamente usando la semilla
         state.VALID_COMBINATIONS = generate_valid_combinations(
             state.SYSTEM_SEED, state.NUM_VALID_COMBINATIONS
@@ -117,6 +117,4 @@ async def save_state_to_db(key: str, value: int):
             (value,),
         )
         await db.commit()
-        logger.info(
-            f"State {key} saved to database: {value}"
-        )
+        logger.info(f"State {key} saved to database: {value}")

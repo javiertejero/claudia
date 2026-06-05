@@ -6,6 +6,9 @@
 app = 'claudia'
 primary_region = 'ams'
 
+# Tell Fly to send SIGTERM instead of the default SIGINT (standard practice)
+kill_signal = "SIGTERM"
+
 [build]
 
 [http_service]

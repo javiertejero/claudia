@@ -1,15 +1,15 @@
-from bootstrap_db import save_state_to_db
 import csv
 import io
 import json
 import logging
 import math
+
 import aiosqlite
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse
 
 import state
-from bootstrap_db import init_db
+from bootstrap_db import init_db, save_state_to_db
 from broadcast import broadcast_admin_stats
 from seats import get_all_seats
 
@@ -53,7 +53,10 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     value = payload.get("value")
                     if isinstance(value, int) and 0 <= value <= 10:
                         state.MAX_ACTIVE_USERS = value
-                        logger.info("MAX_ACTIVE_USERS actualizado a %d por el administrador.", value)
+                        logger.info(
+                            "MAX_ACTIVE_USERS actualizado a %d por el administrador.",
+                            value,
+                        )
                         await save_state_to_db("MAX_ACTIVE_USERS", value)
                         await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
