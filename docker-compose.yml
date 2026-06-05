@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    init: true  # injects tini to ensure shutdown signals are catched
     container_name: reservas_app
     restart: always
     volumes:

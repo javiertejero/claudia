@@ -12,3 +12,8 @@ dependencies = [
 [tool.ruff.lint]
 # Add "I" (isort) to the default rules (which are "E" and "F")
 extend-select = ["I"]
+
+[dependency-groups]
+dev = [
+    "prek>=0.4.4",
+]
