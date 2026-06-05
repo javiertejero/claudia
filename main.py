@@ -24,7 +24,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
 async def cleanup_waiting_queue():
     """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
     while True:
@@ -117,7 +116,7 @@ async def lifespan(app: FastAPI):
         # 2. Flip our flag IMMEDIATELY upon receiving the signal
         state.IS_SHUTTING_DOWN = True
         print(f"\n[Interceptor] Signal {signum} caught! Flag flipped.")
-        
+
         # 3. Hand control back to Uvicorn so it can gracefully close connections
         if signum == signal.SIGINT and callable(original_sigint):
             original_sigint(signum, frame)
@@ -127,7 +126,6 @@ async def lifespan(app: FastAPI):
     # 4. Override the signals with our interceptor
     signal.signal(signal.SIGINT, shutdown_interceptor)
     signal.signal(signal.SIGTERM, shutdown_interceptor)
-
 
     await bootstrap_db.init_db()
     # Iniciar la tarea de limpieza en segundo plano
