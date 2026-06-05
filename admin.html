@@ -1,43 +1,120 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Danza</title>
     <style>
-        body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; color: #0f172a; margin: 0; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
-        .status-dot { display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 5px; }
-        
-        .stats-container { display: flex; gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex: 1; text-align: center; }
-        .stat-card h3 { margin: 0 0 0.5rem 0; color: #64748b; font-size: 1rem; }
-        .stat-card .number { font-size: 2rem; font-weight: bold; color: #0f172a; }
-        
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 2rem;
+            background: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1rem;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #22c55e;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
         /* Contenedor de la tabla para permitir scroll en móvil */
-        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        
-        table { width: 100%; border-collapse: collapse; min-width: 600px; /* Evita que las columnas se aplasten */ }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f1f5f9; font-weight: bold; color: #475569; }
-        tr:hover { background: #f8fafc; }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+            /* Evita que las columnas se aplasten */
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
 
         /* --- ADAPTACIÓN MÓVIL --- */
         @media (max-width: 768px) {
-            body { padding: 1rem; } /* Menos margen lateral en móvil */
-            
-            .header { 
-                flex-direction: column; 
-                align-items: flex-start; 
-                gap: 15px; 
+            body {
+                padding: 1rem;
             }
-            
-            .stats-container { 
-                flex-direction: column; /* Apila las 3 tarjetas de sesiones */
+
+            /* Menos margen lateral en móvil */
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .stats-container {
+                flex-direction: column;
+                /* Apila las 3 tarjetas de sesiones */
                 gap: 0.8rem;
             }
-            
-            .stat-card { padding: 1rem; }
+
+            .stat-card {
+                padding: 1rem;
+            }
         }
 
         /* Panel de combinaciones */
@@ -45,11 +122,17 @@
             display: none;
             background: white;
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             padding: 1.5rem;
             margin-bottom: 2rem;
         }
-        #combo-panel h2 { margin: 0 0 1rem; font-size: 1.1rem; color: #0f172a; }
+
+        #combo-panel h2 {
+            margin: 0 0 1rem;
+            font-size: 1.1rem;
+            color: #0f172a;
+        }
+
         #combo-search {
             width: 100%;
             box-sizing: border-box;
@@ -59,6 +142,7 @@
             margin-bottom: 1rem;
             font-size: 0.95rem;
         }
+
         #combo-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -66,6 +150,7 @@
             max-height: 400px;
             overflow-y: auto;
         }
+
         .combo-item {
             padding: 8px 12px;
             border-radius: 6px;
@@ -77,24 +162,31 @@
             transition: background 0.15s, border-color 0.15s;
             font-family: monospace;
         }
+
         .combo-item:hover {
             background: #dbeafe;
             border-color: #93c5fd;
         }
-</style>
+    </style>
 </head>
-<body>
-    <div id="login-screen" style="display: block; max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
-        <h2 style="margin-top: 0; color: #0f172a;">🔒 Acceso Admin</h2>
-        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Introduce el token de seguridad para gestionar las reservas.</p>
-        
-        <input type="password" id="secret-input" placeholder="Ej: 550e8400-e29b-..." style="display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace;">
 
-        <button onclick="loginAdmin()" style="background: #0f172a; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+<body>
+    <div id="login-screen"
+        style="display: block; max-width: 400px; margin: 10vh auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+        <h2 style="margin-top: 0; color: #0f172a;">🔒 Acceso Admin</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Introduce el token de seguridad para
+            gestionar las reservas.</p>
+
+        <input type="password" id="secret-input" placeholder="Ej: 550e8400-e29b-..."
+            style="display: block; width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace;">
+
+        <button onclick="loginAdmin()"
+            style="background: #0f172a; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem;">
             Entrar al Panel
         </button>
-        
-        <p id="login-error" style="color: #ef4444; font-size: 0.9rem; display: none; margin-top: 15px; font-weight: bold;">
+
+        <p id="login-error"
+            style="color: #ef4444; font-size: 0.9rem; display: none; margin-top: 15px; font-weight: bold;">
             Token incorrecto o conexión rechazada.
         </p>
     </div>
@@ -103,55 +195,69 @@
         <div class="header">
             <div>
                 <h1 style="margin-bottom: 0;">Control de Aforo</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="abrirTaquilla()"
+                        style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                        🎫 Taquilla (Saltar Cola)
+                    </button>
+                    <button onclick="toggleComboPanel()"
+                        style="background: #7c3aed; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                        📋 Combinaciones
+                    </button>
+                    <button id="export-btn">
+                        📥 Exportar CSV
+                    </button>
+                    <button id="logout-btn" onclick="cerrarSesion()" title="Cierra sesión de admin y taquilla">
+                        🔒 Cerrar sesión
+                    </button>
+                    <button onclick="resetDatabase()"
+                        style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                        ⚠️ Borrar Base de Datos
+                    </button>
+                    <div
+                        style="background: #f1f5f9; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #cbd5e1; margin-right: auto; margin-left: 20px;">
+                        <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter"
+                                style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
+                        <button onclick="ws.send(JSON.stringify({action: 'reset_counter'}))"
+                            style="background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #475569;">
+                            🔄 Reset
+                        </button>
+                    </div>
+                    <div
+                        style="background: #f0fdf4; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #86efac;">
+                        <span style="font-size: 0.9rem; color: #166534; white-space: nowrap;">👥 Aforo máx.:</span>
+                        <button id="max-users-dec" onclick="changeMaxUsers(-1)"
+                            style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">−</button>
+                        <strong id="max-users-value"
+                            style="font-size: 1.2rem; color: #15803d; min-width: 1.5ch; text-align: center;">2</strong>
+                        <button id="max-users-inc" onclick="changeMaxUsers(1)"
+                            style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">+</button>
+                    </div>
+                </div>
                 <div style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
                     <span class="status-dot"></span> En vivo
-                    <span style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
+                    <span
+                        style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
                         👥 Editando: <strong id="active-count" style="color: #2563eb;">0</strong>
                     </span>
-                    <span style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
+                    <span
+                        style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
                         ⏳ En cola: <strong id="queued-count" style="color: #ea580c;">0</strong>
                     </span>
                 </div>
             </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button onclick="abrirTaquilla()" style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-                    🎫 Taquilla (Saltar Cola)
-                </button>
-                <button onclick="toggleComboPanel()" style="background: #7c3aed; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-                    📋 Combinaciones
-                </button>
-                <button id="export-btn">
-                    📥 Exportar CSV
-                </button>
-                <button id="logout-btn" onclick="cerrarSesion()" title="Cierra sesión de admin y taquilla">
-                    🔒 Cerrar sesión
-                </button>
-                <button onclick="resetDatabase()" style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-                    ⚠️ Borrar Base de Datos
-                </button>
-                <div style="background: #f1f5f9; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #cbd5e1; margin-right: auto; margin-left: 20px;">
-                    <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter" style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
-                    <button onclick="ws.send(JSON.stringify({action: 'reset_counter'}))" style="background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #475569;">
-                        🔄 Reset
-                    </button>
-                </div>
-                <div style="background: #f0fdf4; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #86efac;">
-                    <span style="font-size: 0.9rem; color: #166534; white-space: nowrap;">👥 Aforo máx.:</span>
-                    <button id="max-users-dec" onclick="changeMaxUsers(-1)" style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">−</button>
-                    <strong id="max-users-value" style="font-size: 1.2rem; color: #15803d; min-width: 1.5ch; text-align: center;">2</strong>
-                    <button id="max-users-inc" onclick="changeMaxUsers(1)" style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">+</button>
-                </div>
-            </div>
+
+
         </div>
 
         <div class="stats-container" id="stats">
-            </div>
+        </div>
 
         <!-- Panel de combinaciones válidas -->
         <div id="combo-panel">
             <h2>📋 Combinaciones válidas (<span id="combo-count">0</span>)</h2>
-            <input id="combo-search" type="search" placeholder="Buscar combinación..." oninput="filtrarCombos(this.value)">
+            <input id="combo-search" type="search" placeholder="Buscar combinación..."
+                oninput="filtrarCombos(this.value)">
             <div id="combo-list"></div>
         </div>
 
@@ -167,7 +273,7 @@
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </div>
@@ -178,7 +284,7 @@
 
         // 1. GESTIÓN DEL SECRETO Y OFUSCACIÓN DE URL
         let secret = localStorage.getItem('taquillaSecret');
-        
+
         // Limpiamos la ruta actual (ej: ['', 'admin', '550e8400...'])
         const pathParts = window.location.pathname.split("/").filter(p => p);
 
@@ -188,7 +294,7 @@
             if (urlSecret) {
                 secret = urlSecret;
                 localStorage.setItem('taquillaSecret', secret); // Lo guardamos
-                
+
                 // MAGIA: Borramos el secreto de la barra de direcciones y del historial
                 window.history.replaceState({}, document.title, "/admin");
             }
@@ -207,13 +313,13 @@
         function loginAdmin() {
             const inputSecret = document.getElementById("secret-input").value.trim();
             if (!inputSecret) return;
-            
+
             // Ocultamos el mensaje de error si lo hubiera
             document.getElementById("login-error").style.display = "none";
-            
+
             localStorage.setItem('taquillaSecret', inputSecret);
             secret = inputSecret; // Actualizamos la global
-            
+
             conectarDashboard(secret);
         }
 
@@ -225,24 +331,24 @@
 
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
             const wsUrl = `${protocol}://${window.location.host}/ws/admin/${token}`;
-            
+
             ws = new WebSocket(wsUrl);
 
             // Si el servidor nos rechaza la conexión (ej. token incorrecto), saltará este evento
-            ws.onclose = function(event) {
+            ws.onclose = function (event) {
                 console.warn("Conexión WebSocket cerrada o rechazada.");
-                
+
                 // Volvemos a la pantalla de login
                 document.getElementById("dashboard-screen").style.display = "none";
                 document.getElementById("login-screen").style.display = "block";
                 document.getElementById("login-error").style.display = "block";
-                
+
                 // Purgamos el token malo del almacenamiento para que no se quede atascado en un bucle
                 localStorage.removeItem('taquillaSecret');
                 secret = null;
             };
 
-            ws.onmessage = function(event) {
+            ws.onmessage = function (event) {
                 const data = JSON.parse(event.data);
                 // Guardamos modo taquilla
                 localStorage.setItem('taquillaSecret', secret);
@@ -267,7 +373,7 @@
             const sesiones = ['11h', '12:45h', '18h'];
             const tbody = document.getElementById("table-body");
             const stats = document.getElementById("stats");
-            
+
             tbody.innerHTML = "";
             stats.innerHTML = "";
 
@@ -276,7 +382,7 @@
                 const asientosSesion = seats.filter(s => s.session_time === sesion);
                 const reservados = asientosSesion.filter(s => s.status === 'reserved').length;
                 const totales = asientosSesion.length;
-                
+
                 stats.innerHTML += `
                     <div class="stat-card">
                         <h3>Sesión ${sesion}</h3>
@@ -287,20 +393,20 @@
 
             // 2. Renderizar tabla de reservas (solo asientos ocupados)
             const ocupados = seats.filter(s => s.status === 'reserved');
-            
+
             // Ordenar por sesión y nombre para agrupar las reservas de la misma persona
             ocupados.sort((a, b) => a.session_time.localeCompare(b.session_time) || a.owner_name.localeCompare(b.owner_name));
 
             ocupados.forEach(seat => {
                 let fila, butaca;
-                
+
                 if (seat.seat_number <= 220) {
                     const mitad = ASIENTOS_POR_FILA / 2;
                     fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
                     const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
-                    
-                    butaca = posInRow < mitad 
-                        ? (mitad - posInRow) * 2 
+
+                    butaca = posInRow < mitad
+                        ? (mitad - posInRow) * 2
                         : ((posInRow - mitad) * 2) + 1;
                 } else {
                     fila = 12;
@@ -335,13 +441,13 @@
         function resetDatabase() {
             const warning1 = "⚠️ ¡ATENCIÓN! Vas a BORRAR TODAS LAS RESERVAS del sistema.\n\nEsta acción NO se puede deshacer y expulsará a todos los usuarios que estén conectados ahora mismo.\n\n¿Estás completamente seguro?";
             const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con la eliminación total de la base de datos?";
-            
+
             // Doble confirmación por seguridad
             if (confirm(warning1)) {
                 if (confirm(warning2)) {
                     // Enviamos la orden al servidor a través de la conexión segura existente
                     ws.send(JSON.stringify({ action: "reset_db" }));
-                    
+
                     // Feedback visual temporal en el botón
                     const btn = document.querySelector("button[onclick='resetDatabase()']");
                     const textoOriginal = btn.innerHTML;
@@ -400,7 +506,7 @@
 
         function filtrarCombos(query) {
             const q = query.toLowerCase().replace(/[^a-z]/g, '');
-            const filtered = allCombinations.filter(c => c.replace('_','').includes(q));
+            const filtered = allCombinations.filter(c => c.replace('_', '').includes(q));
             renderCombos(filtered);
         }
 
@@ -416,12 +522,13 @@
             window.location.reload();
         }
 
-    document.getElementById("secret-input").addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault(); // Evita que la página se recargue si el input está dentro de un <form>
-            loginAdmin();
-        }
-    });
-</script>
+        document.getElementById("secret-input").addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Evita que la página se recargue si el input está dentro de un <form>
+                loginAdmin();
+            }
+        });
+    </script>
 </body>
+
 </html>
