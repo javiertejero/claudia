@@ -91,7 +91,7 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     async with state.queue_lock:
                         state.waiting_queue.clear()
                         async with aiosqlite.connect(state.DB_FILE) as db:
-                            await db.execute("DELETE FROM queue")
+                            await db.execute("DROP TABLE IF EXISTS queue")
                             await db.commit()
                     state.active_users_names.clear()
                     for task in list(state.active_user_tasks.values()):

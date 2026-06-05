@@ -9,7 +9,11 @@ services:
       # Mapeamos una carpeta local 'data' al contenedor para que la base de datos sea persistente
       - ./data:/app/data
     env_file: .env
-    
+    # Optional: explicitly tell compose to use SIGTERM
+    stop_signal: SIGTERM
+    # Optional: give it a bit more time than the 10s default
+    stop_grace_period: 15s
+
   caddy:
     image: caddy:latest
     container_name: reservas_proxy
