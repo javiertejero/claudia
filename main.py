@@ -116,6 +116,8 @@ async def cleanup_waiting_queue():
             len(state.active_connections),
             len(state.waiting_queue),
         )
+        for active_user, timeout in state.active_user_expires.items():
+            logger.info(f"User {active_user} expires at {timeout}")
 
         if stale_active:
             logger.info(
@@ -213,7 +215,14 @@ async def expire_user_session(client_id: str):
                         }
                     )
                 )
+                await asyncio.sleep(
+                    0.1
+                )  # wait to ensure the client can process the timeout message
                 await state.active_connections[client_id].close()
+                state.active_user_expires.pop(client_id, None)
+                state.active_user_tasks.pop(client_id, None)
+                state.active_users.discard(client_id)
+                state.active_connections.pop(client_id, None)
     except asyncio.CancelledError:
         pass
 
@@ -333,14 +342,14 @@ async def websocket_endpoint(
 
     if not is_privileged:
         # 1. Comprobar si la IP está bloqueada
-        remaining = rate_limiting.get_block_remaining(ip)
-        if remaining > 0:
+        remaining_login_retries = rate_limiting.get_block_remaining(ip)
+        if remaining_login_retries > 0:
             await websocket.accept()
             await websocket.send_text(
                 json.dumps(
                     {
                         "type": "error",
-                        "message": f"Esta IP está temporalmente bloqueada por intentos fallidos. Inténtalo de nuevo en {remaining} segundos.",
+                        "message": f"Esta IP está temporalmente bloqueada por intentos fallidos. Inténtalo de nuevo en {remaining_login_retries} segundos.",
                     }
                 )
             )
@@ -469,18 +478,6 @@ async def websocket_endpoint(
             await websocket.send_text(
                 json.dumps({"type": "seats_update", "seats": sanitized_seats})
             )
-            # If no time remaining, schedule disconnect after 3 seconds
-            if remaining == 0:
-
-                async def _delayed_disconnect():
-                    await asyncio.sleep(3)
-                    try:
-                        await websocket.close()
-                    except Exception:
-                        pass
-                    state.active_user_expires.pop(client_id, None)
-
-                asyncio.create_task(_delayed_disconnect())
         else:
             async with state.queue_lock:
                 state.waiting_queue.append(client_id)
