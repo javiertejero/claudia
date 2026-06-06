@@ -247,10 +247,20 @@ async def expire_user_session(client_id: str):
                 except Exception as e:
                     # es probable que esté ya cerrada, suele pasar
                     logger.warning("Error cerrando conexión a %s: %s", client_id, e)
+                try:
+                    await seats.release_reserving_seats(client_id)
+                except Exception as e:
+                    logger.error(
+                        "Error limpiando reservas de usuario expirado %s: %s",
+                        client_id,
+                        e,
+                    )
                 state.active_user_expires.pop(client_id, None)
                 state.active_user_tasks.pop(client_id, None)
                 state.active_users.discard(client_id)
                 state.active_connections.pop(client_id, None)
+                state.active_users_names.pop(client_id, None)
+                await broadcast.broadcast_seats()
                 await (
                     process_queue()
                 )  # trigger process_queue to ensure we let the next user enter
