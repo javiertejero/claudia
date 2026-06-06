@@ -211,18 +211,25 @@ async def expire_user_session(client_id: str):
         if client_id in state.active_users:
             if time.time() >= state.active_user_expires.get(client_id, 0):
                 logger.warning("Expiring user %s", client_id)
-                await state.active_connections[client_id].send_text(
-                    json.dumps(
-                        {
-                            "type": "timeout",
-                            "message": "Tiempo agotado. Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo.",
-                        }
+                try:
+                    await state.active_connections[client_id].send_text(
+                        json.dumps(
+                            {
+                                "type": "timeout",
+                                "message": "Tiempo agotado. Tus butacas seleccionadas han quedado registradas, pero has perdido el turno de edición. Recarga la página si necesitas modificar algo.",
+                            }
+                        )
                     )
-                )
+                except Exception as e:
+                    logger.error("Error enviando timeout a %s: %s", client_id, e)
                 await asyncio.sleep(
                     0.1
                 )  # wait to ensure the client can process the timeout message
-                await state.active_connections[client_id].close()
+                try:
+                    await state.active_connections[client_id].close()
+                except Exception as e:
+                    # es probable que esté ya cerrada, suele pasar
+                    logger.warning("Error cerrando conexión a %s: %s", client_id, e)
                 state.active_user_expires.pop(client_id, None)
                 state.active_user_tasks.pop(client_id, None)
                 state.active_users.discard(client_id)
@@ -236,7 +243,7 @@ async def expire_user_session(client_id: str):
                     client_id,
                 )
     except asyncio.CancelledError:
-        pass
+        logger.exception("Task cancelled for user %s", client_id)
 
 
 async def sync_queue_to_db():
@@ -270,6 +277,8 @@ async def sync_queue_to_db():
 
 
 async def process_queue():
+    """Procesa la cola de espera y permite entrar a los usuarios."""
+    logger.info("Procesando cola de espera...")
     while len(state.active_users) < state.MAX_ACTIVE_USERS and state.waiting_queue:
         async with state.queue_lock:
             if not state.waiting_queue:
