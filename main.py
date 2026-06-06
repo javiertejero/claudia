@@ -10,6 +10,7 @@ from random import shuffle
 import aiosqlite
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from uvicorn.protocols.utils import ClientDisconnected
 
 import bootstrap_db
@@ -198,6 +199,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(admin_router)
+
+
+class CacheControlledStaticFiles(StaticFiles):
+    def file_response(self, *args, **kwargs) -> FileResponse:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
+app.mount("/static", CacheControlledStaticFiles(directory="static"), name="static")
 
 
 async def expire_user_session(client_id: str):

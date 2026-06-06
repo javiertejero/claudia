@@ -6,63 +6,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva de Butacas</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Permanent+Marker&display=swap');
+
         body {
-            font-family: system-ui, sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
             text-align: center;
             padding: 2rem;
-            background: #f4f4f5;
-            margin: 150px 0 0 0;
+            background: #000;
+            color: #f1f5f9;
+            margin: 0;
+        }
+
+        /* Cabecera unificada */
+        .main-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1rem;
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .header-title {
+            font-family: 'Permanent Marker', cursive, sans-serif;
+            font-size: 3rem;
+            color: #e60000;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 1rem 0;
+            text-shadow: 0 0 15px rgba(230, 0, 0, 0.5);
+        }
+
+        @media (max-width: 600px) {
+            .header-title {
+                font-size: 2.2rem;
+            }
+        }
+
+        .header-logo {
+            max-width: 90%;
+            height: auto;
+            width: 380px;
+            display: block;
+            margin: 0 auto;
+            filter: drop-shadow(0 0 10px rgba(230, 0, 0, 0.3));
         }
 
         /* Pantalla de login */
         #login-screen {
             max-width: 400px;
-            margin: 10vh auto;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 2vh auto;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+        }
+
+        #login-screen h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
         }
 
         input {
             display: block;
             width: 100%;
             box-sizing: border-box;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #e60000;
+            background: rgba(230, 0, 0, 0.05);
         }
 
         button.btn-primary {
-            background: #000;
+            background: linear-gradient(135deg, #e60000 0%, #b30000 100%);
             color: #fff;
             border: none;
-            padding: 12px;
+            padding: 14px 12px;
             width: 100%;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 1rem;
+            transition: opacity 0.2s, transform 0.1s;
         }
 
         button.btn-primary:hover {
-            background: #333;
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        button.btn-primary:active {
+            transform: translateY(0);
         }
 
         button.btn-secondary {
             background: transparent;
-            color: #64748b;
-            border: 1px solid #cbd5e1;
-            padding: 8px 12px;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 12px;
             width: 100%;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.85rem;
             margin-top: 8px;
+            transition: background 0.2s, color 0.2s;
         }
 
         button.btn-secondary:hover {
-            background: #f1f5f9;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
         }
 
         /* Interfaz principal */
@@ -104,34 +174,95 @@
            Animaciones de alerta de cola
         ============================================ */
         @keyframes flash-screen {
-            0%   { background-color: #f4f4f5; }
-            15%  { background-color: #fed7aa; }
-            30%  { background-color: #f4f4f5; }
-            45%  { background-color: #fca5a5; }
-            60%  { background-color: #f4f4f5; }
-            75%  { background-color: #fca5a5; }
-            100% { background-color: #f4f4f5; }
+            0% {
+                background-color: #000;
+            }
+
+            15% {
+                background-color: #7c2d12;
+            }
+
+            30% {
+                background-color: #000;
+            }
+
+            45% {
+                background-color: #7f1d1d;
+            }
+
+            60% {
+                background-color: #000;
+            }
+
+            75% {
+                background-color: #7f1d1d;
+            }
+
+            100% {
+                background-color: #000;
+            }
         }
 
         @keyframes flash-screen-critical {
-            0%   { background-color: #f4f4f5; }
-            10%  { background-color: #ef4444; }
-            25%  { background-color: #f4f4f5; }
-            40%  { background-color: #ef4444; }
-            55%  { background-color: #f4f4f5; }
-            70%  { background-color: #f97316; }
-            85%  { background-color: #f4f4f5; }
-            100% { background-color: #f4f4f5; }
+            0% {
+                background-color: #000;
+            }
+
+            10% {
+                background-color: #991b1b;
+            }
+
+            25% {
+                background-color: #000;
+            }
+
+            40% {
+                background-color: #991b1b;
+            }
+
+            55% {
+                background-color: #000;
+            }
+
+            70% {
+                background-color: #c2410c;
+            }
+
+            85% {
+                background-color: #000;
+            }
+
+            100% {
+                background-color: #000;
+            }
         }
 
         @keyframes banner-pulse {
-            0%, 100% { transform: scale(1);       box-shadow: 0 0 0 0 rgba(249,115,22,0); }
-            50%       { transform: scale(1.025);   box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+            }
+
+            50% {
+                transform: scale(1.025);
+                box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+            }
         }
 
         @keyframes banner-pulse-critical {
-            0%, 100% { transform: scale(1);       box-shadow: 0 0 0 0  rgba(239,68,68,0); }
-            50%       { transform: scale(1.03);    box-shadow: 0 0 0 14px rgba(239,68,68,0); }
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+
+            50% {
+                transform: scale(1.03);
+                box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
+            }
         }
 
         .anim-flash {
@@ -161,12 +292,14 @@
 
         .session-block {
             margin-bottom: 4rem;
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             overflow-x: auto;
-            /* NUEVO: Permite deslizar a los lados en móvil */
         }
 
         .grid {
@@ -174,19 +307,21 @@
             gap: 8px;
             max-width: 800px;
             min-width: 600px;
-            /* NUEVO: Fuerza a que la cuadrícula no se aplaste más de esto */
             margin: 0 auto 1.5rem auto;
             align-items: center;
         }
 
         .session-title {
             margin-top: 0;
-            color: #333;
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
         }
 
         .row-header {
             font-weight: bold;
-            color: #475569;
+            color: #94a3b8;
             font-size: 0.9rem;
             text-align: right;
             padding-right: 5px;
@@ -194,32 +329,40 @@
 
         .pasillo {
             width: 100%;
-            /* El div invisible que hará de pasillo */
         }
 
         .seat {
             padding: 12px 0;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: bold;
             border: none;
-            transition: background 0.1s;
+            transition: background 0.15s, transform 0.1s;
+        }
+
+        .seat:hover {
+            transform: scale(1.05);
         }
 
         .free {
-            background: #e2e8f0;
-            color: #475569;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
         }
 
         .free:hover {
-            background: #cbd5e1;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
         }
 
         .reserved {
-            background: #334155;
-            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.2);
             cursor: not-allowed;
+        }
+
+        .reserved:hover {
+            transform: none;
         }
 
         .my-seat {
@@ -227,17 +370,13 @@
             color: #1c1917;
         }
 
-        /* Ámbar para tus butacas — visible para daltónicos */
         .my-seat:hover {
             background: #d97706;
         }
 
         .escenario-wrapper {
-            /* On mobile: stick to the left edge of the scroll viewport so the
-               escenario always appears centred on-screen even when scrolled. */
             position: sticky;
             left: 0;
-            /* Take the full visible width of the scroll container */
             width: 100%;
             margin-bottom: 20px;
         }
@@ -246,29 +385,40 @@
             max-width: 400px;
             margin: 0 auto;
             padding: 15px;
-            background: #334155;
-            color: white;
+            background: #27272a;
+            color: #f1f5f9;
             font-weight: bold;
-            border-radius: 4px;
+            border-radius: 6px;
             letter-spacing: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* Contador flotante */
         #seat-counter {
             display: none;
-            /* Oculto por defecto */
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #1e293b;
-            /* Gris oscuro por defecto */
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
+            padding: 15px 25px;
+            border-radius: 16px;
             font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             z-index: 1000;
             transition: background 0.3s ease;
+        }
+
+        #seat-counter button {
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        #seat-counter button:hover {
+            transform: scale(1.02);
         }
 
         /* Animación divertida para el límite de butacas */
@@ -293,7 +443,6 @@
         }
 
         .anim-limite {
-            /* Ejecuta la animación en 0.6 segundos */
             animation: giro-limite 0.6s ease-in-out;
         }
 
@@ -372,10 +521,17 @@
             guardada.</span>
         <button id="btn-reconnect" onclick="window.location.reload()">&#128260; Reconectar</button>
     </div>
+
+    <!-- Cabecera del Espectáculo -->
+    <header class="main-header">
+        <h1 class="header-title">Torrelles en Dansa</h1>
+        <img src="/static/torrelles-en-dansa-001.webp" alt="Torrelles en Dansa" class="header-logo">
+    </header>
     <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
         onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
     <!-- Barra de herramientas del administrador en MODO TAQUILLA -->
-    <div id="taquilla-admin-bar" style="display:none; position:sticky; top:0; z-index:500; background: linear-gradient(90deg,#92400e,#b45309); padding: 10px 16px; display:none; align-items:center; justify-content:space-between; gap:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+    <div id="taquilla-admin-bar"
+        style="display:none; position:sticky; top:0; z-index:500; background: linear-gradient(90deg,#92400e,#b45309); padding: 10px 16px; display:none; align-items:center; justify-content:space-between; gap:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
         <span style="color:#fef3c7; font-weight:800; font-size:0.95rem; letter-spacing:0.5px;">🎫 MODO TAQUILLA</span>
         <div style="display:flex; gap:8px;">
             <button id="btn-volver-admin" onclick="volverAAdmin()"
@@ -402,8 +558,7 @@
         <h2>Espectáculo de Danza</h2>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
         <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
-            <button id="btn-solicitar-transferencia" class="btn-secondary"
-                onclick="solicitarTransferencia()"
+            <button id="btn-solicitar-transferencia" class="btn-secondary" onclick="solicitarTransferencia()"
                 style="background: #f0fdf4; color: #166534; border-color: #86efac;">
                 🔗 Solicitar transferencia de cuota
             </button>
@@ -413,7 +568,8 @@
     </div>
 
     <div id="seat-counter">
-        <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/<span id="seat-quota">6</span></div>
+        <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/<span
+                id="seat-quota">6</span></div>
         <div id="warning-maximo"
             style="display: none; font-size: 0.75rem; font-weight: bold; color: #ffedd5; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px;">
             ⚠️ MÁXIMO ALCANZADO
@@ -484,10 +640,10 @@
                 } else if (event.data === 'pong') {
                     // Hemos recibido respuesta: ya hay una taquilla activa. Bloqueamos esta interfaz.
                     document.body.innerHTML = `
-                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <h2 style="color: #ea580c; margin-top: 0;">🎫 Taquilla en uso</h2>
+                        <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 10vh auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
+                            <h2 style="color: #f97316; margin-top: 0;">🎫 Taquilla en uso</h2>
                             <p>Ya tienes otra pestaña de Taquilla abierta en este navegador.</p>
-                            <p style="font-size: 0.9em; color: #64748b; margin-top: 2rem;">Por seguridad, cierra esta pestaña y continúa gestionando las entradas desde la original.</p>
+                            <p style="font-size: 0.9em; color: #94a3b8; margin-top: 2rem;">Por seguridad, cierra esta pestaña y continúa gestionando las entradas desde la original.</p>
                         </div>
                     `;
                 }
@@ -703,8 +859,8 @@
             }
             tiempoAgotadoFlag = true;
             document.getElementById("app-screen").innerHTML = `
-                <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h2 style="color: #ea580c; margin-top: 0;">⏱️ Tiempo Agotado</h2>
+                <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
+                    <h2 style="color: #f97316; margin-top: 0;">⏱️ Tiempo Agotado</h2>
                     <p>${message}</p>
                     <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1.5rem;">Volver a intentar</button>
                 </div>
@@ -795,10 +951,10 @@
                     liberarWakeLock();
                     // Borramos toda la interfaz sustituyendo el body
                     document.body.innerHTML = `
-                        <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 10vh auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <h2 style="color: #ef4444; margin-top: 0;">⚠️ Sesión Anulada</h2>
+                        <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 10vh auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
+                            <h2 style="color: #f87171; margin-top: 0;">⚠️ Sesión Anulada</h2>
                             <p>${data.message}</p>
-                            <p style="font-size: 0.9em; color: #64748b; margin-top: 2rem;">Puedes continuar tu reserva en la pestaña nueva.</p>
+                            <p style="font-size: 0.9em; color: #94a3b8; margin-top: 2rem;">Puedes continuar tu reserva en la pestaña nueva.</p>
                         </div>
                     `;
 
@@ -855,7 +1011,7 @@
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const tocar = (delay) => {
-                    const osc  = ctx.createOscillator();
+                    const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.connect(gain);
                     gain.connect(ctx.destination);
@@ -970,7 +1126,7 @@
 
             // 2. ACTUALIZAR WHATSAPP / PORTAPAPELES CON ANOMALÍA FILA 12
             const mySeats = seats.filter(seat => seat.is_mine);
-            
+
             if (mySeatsCount > 0) {
                 const nombreCompleto = clientId;
                 let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
@@ -1246,7 +1402,7 @@
 
             // Pantalla de agradecimiento
             document.getElementById("app-screen").innerHTML = `
-                <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
                     <h2 style="color: #22c55e; margin-top: 0;">✅ ¡Reserva Guardada!</h2>
                     <p>Tus butacas han quedado registradas correctamente en el sistema.</p>
                     ${footerTaq}

@@ -34,6 +34,10 @@ kill_signal = "SIGTERM"
   source = 'claudia_data'
   destination = '/app/data'
 
+# --- NEW: Fly.io Static Asset Routing ---
+[[statics]]
+  guest_path = "/app/static"
+  url_prefix = "/static"
 
 # [deploy]
 #   strategy = "immediate"  # en caso de despliegue causamos downtime, sería interesante para implementar "restore queue"
