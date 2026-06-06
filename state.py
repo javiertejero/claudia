@@ -44,6 +44,13 @@ FILAS = 12
 # La suma total debe ser siempre ASIENTOS_POR_FILA * FILAS * 3 + 3*3 = 729
 USER_QUOTAS: dict[str, int] = {}
 
+
+def get_quota(client_id: str) -> int:
+    if DISABLE_IDENTITY_CHECKS:
+        return 6
+    return USER_QUOTAS.get(client_id, 0)
+
+
 # Transferencia de cuotas: hashes seguros por usuario.
 # USER_TRANSFER_HASHES: client_id → hash_transferencia (para compartir por WhatsApp)
 # HASH_TO_USER: hash_transferencia → client_id (lookup inverso O(1))

@@ -56,7 +56,7 @@ async def toggle_seat(
     client_id: str, seat_num: int, sess_time: str, user_full_name: str
 ) -> str | None:
     # Retorna mensaje de error si se alcanza la cuota del usuario, de lo contrario None.
-    user_quota = state.USER_QUOTAS.get(client_id, 0)
+    user_quota = state.get_quota(client_id)
     async with aiosqlite.connect(state.DB_FILE) as db:
         # Contamos cuántos asientos tiene ya (reserved o reserving)
         async with db.execute(

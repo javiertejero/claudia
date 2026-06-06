@@ -337,7 +337,7 @@ async def process_queue():
                         "type": "status",
                         "status": "active",
                         "timeout": state.SESSION_TIMEOUT,
-                        "quota": state.USER_QUOTAS.get(next_client, 0),
+                        "quota": state.get_quota(next_client),
                     }
                 )
             )
@@ -422,7 +422,7 @@ async def transfer_validate(token: str = "", emisor: str = ""):
             status_code=422,
         )
 
-    cuota_emisor = state.USER_QUOTAS.get(normalized_emisor, 0)
+    cuota_emisor = state.get_quota(normalized_emisor)
 
     # Contar butacas ya reservadas por el emisor (en todas las sesiones)
     async with aiosqlite.connect(state.DB_FILE) as db:
@@ -496,7 +496,7 @@ async def transfer_confirm(request: Request):
     if not isinstance(butacas, int) or butacas <= 0:
         return JSONResponse({"error": "Número de butacas inválido"}, status_code=422)
 
-    cuota_emisor = state.USER_QUOTAS.get(normalized_emisor, 0)
+    cuota_emisor = state.get_quota(normalized_emisor)
 
     # Contar butacas reservadas del emisor para calcular máximo transferible
     async with aiosqlite.connect(state.DB_FILE) as db:
@@ -518,7 +518,7 @@ async def transfer_confirm(request: Request):
         )
 
     nueva_cuota_emisor = cuota_emisor - butacas
-    cuota_receptor = state.USER_QUOTAS.get(receptor_id, 0)
+    cuota_receptor = state.get_quota(receptor_id)
     nueva_cuota_receptor = cuota_receptor + butacas
 
     # Actualizar BD de forma atómica
@@ -695,7 +695,7 @@ async def websocket_endpoint(
                     "type": "status",
                     "status": "active",
                     "timeout": remaining,
-                    "quota": state.USER_QUOTAS.get(client_id, 0),
+                    "quota": state.get_quota(client_id),
                 }
             )
         )
@@ -731,7 +731,7 @@ async def websocket_endpoint(
                         "type": "status",
                         "status": "active",
                         "timeout": state.SESSION_TIMEOUT,
-                        "quota": state.USER_QUOTAS.get(client_id, 0),
+                        "quota": state.get_quota(client_id),
                     }
                 )
             )

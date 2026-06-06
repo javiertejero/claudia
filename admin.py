@@ -128,7 +128,7 @@ async def list_combinations(secret: str):
     if secret != state.ADMIN_SECRET:
         return {"error": "No autorizado"}
     result = [
-        {"combo": combo, "quota": state.USER_QUOTAS.get(combo, 0)}
+        {"combo": combo, "quota": state.get_quota(combo)}
         for combo in sorted(state.VALID_COMBINATIONS)
     ]
     return {"combinations": result, "app_url": state.APP_URL}
@@ -211,7 +211,7 @@ async def download_quotas(secret: str):
     writer = csv.writer(output)
     writer.writerow(["user_id", "quota"])
     for combo in sorted(state.VALID_COMBINATIONS):
-        writer.writerow([combo, state.USER_QUOTAS.get(combo, 0)])
+        writer.writerow([combo, state.get_quota(combo)])
 
     output.seek(0)
     return StreamingResponse(
@@ -239,7 +239,7 @@ async def adjust_quota(secret: str, user_id: str, request: Request):
     if delta not in (1, -1):
         return JSONResponse({"error": "delta debe ser 1 o -1"}, status_code=422)
 
-    current = state.USER_QUOTAS.get(user_id, 0)
+    current = state.get_quota(user_id)
     new_quota = current + delta
 
     if new_quota < 0 or new_quota > 20:
