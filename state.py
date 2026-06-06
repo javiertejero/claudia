@@ -25,7 +25,7 @@ admin_connections = set()
 
 SYSTEM_SEED = None
 VALID_COMBINATIONS = set()
-NUM_VALID_COMBINATIONS = 300
+NUM_VALID_COMBINATIONS = 200
 
 # Estado en memoria
 active_connections = {}  # {client_id: websocket}

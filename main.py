@@ -14,13 +14,19 @@ from uvicorn.protocols.utils import ClientDisconnected
 
 import bootstrap_db
 import broadcast
-import identity
 import rate_limiting
 import seats
 import state
 from admin import admin_router
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+import identity  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 

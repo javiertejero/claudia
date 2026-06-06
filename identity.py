@@ -312,8 +312,19 @@ assert len(set(ANIMALS)) == len(ANIMALS)
 assert len(set(ADJECTIVES)) == len(ADJECTIVES)
 assert len(set(ANIMALS + ADJECTIVES)) == len(ANIMALS) + len(ADJECTIVES)
 
+_TOTAL_COMBINATIONS = len(ANIMALS) * len(ADJECTIVES)
+_VALID_COMBINATIONS = 200
+logger.info(
+    "Probabilidad de adivinar una combinación válida al azar: "
+    "%d/%d (≈ 1 de cada %.1f intentos, %.4f%%)",
+    _VALID_COMBINATIONS,
+    _TOTAL_COMBINATIONS,
+    _TOTAL_COMBINATIONS / _VALID_COMBINATIONS,
+    100 * _VALID_COMBINATIONS / _TOTAL_COMBINATIONS,
+)
 
-def generate_valid_combinations(seed: str, num_combinations: int = 300) -> set[str]:
+
+def generate_valid_combinations(seed: str, num_combinations: int = 200) -> set[str]:
     all_combos = [f"{a}_{adj}" for a in ANIMALS for adj in ADJECTIVES]
     # Hashing determinista para evitar dependencia en random.Random interno de Python
     all_combos.sort(key=lambda c: hashlib.sha256(f"{c}:{seed}".encode()).hexdigest())
