@@ -82,9 +82,81 @@
             color: #854d0e;
         }
 
+        /* Cola urgente: posición ≤5 */
+        .queued-urgent {
+            background: #fed7aa;
+            color: #7c2d12;
+            border: 2px solid #f97316;
+        }
+
+        .queued-critical {
+            background: #fecaca;
+            color: #7f1d1d;
+            border: 2px solid #ef4444;
+        }
+
         .active {
             background: #bbf7d0;
             color: #166534;
+        }
+
+        /* ============================================
+           Animaciones de alerta de cola
+        ============================================ */
+        @keyframes flash-screen {
+            0%   { background-color: #f4f4f5; }
+            15%  { background-color: #fed7aa; }
+            30%  { background-color: #f4f4f5; }
+            45%  { background-color: #fca5a5; }
+            60%  { background-color: #f4f4f5; }
+            75%  { background-color: #fca5a5; }
+            100% { background-color: #f4f4f5; }
+        }
+
+        @keyframes flash-screen-critical {
+            0%   { background-color: #f4f4f5; }
+            10%  { background-color: #ef4444; }
+            25%  { background-color: #f4f4f5; }
+            40%  { background-color: #ef4444; }
+            55%  { background-color: #f4f4f5; }
+            70%  { background-color: #f97316; }
+            85%  { background-color: #f4f4f5; }
+            100% { background-color: #f4f4f5; }
+        }
+
+        @keyframes banner-pulse {
+            0%, 100% { transform: scale(1);       box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+            50%       { transform: scale(1.025);   box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+        }
+
+        @keyframes banner-pulse-critical {
+            0%, 100% { transform: scale(1);       box-shadow: 0 0 0 0  rgba(239,68,68,0); }
+            50%       { transform: scale(1.03);    box-shadow: 0 0 0 14px rgba(239,68,68,0); }
+        }
+
+        .anim-flash {
+            animation: flash-screen 1.2s ease-in-out;
+        }
+
+        .anim-flash-critical {
+            animation: flash-screen-critical 1.4s ease-in-out;
+        }
+
+        #status-banner.anim-pulse-urgent {
+            animation: banner-pulse 0.8s ease-in-out 3;
+        }
+
+        #status-banner.anim-pulse-critical {
+            animation: banner-pulse-critical 0.6s ease-in-out 5;
+        }
+
+        /* Tiempo estimado en el banner de cola */
+        #queue-eta {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 0.85rem;
+            font-weight: normal;
+            opacity: 0.85;
         }
 
         .session-block {
@@ -587,8 +659,9 @@
 
                 if (data.type === "status") {
                     if (data.status === "queued") {
-                        banner.className = "queued";
-                        banner.innerText = `Estás en la cola. Posición: ${data.position}`;
+                        const pos = data.position;
+                        actualizarBannerCola(pos);
+                        alertarPosicionCola(pos);
                         container.style.display = "none";
                         document.getElementById("seat-counter").style.display = "none"; // Ocultar contador de butacas reservadas cuando estás en cola
                     } else if (data.status === "active") {
@@ -598,6 +671,12 @@
                         banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
                         document.getElementById("sessions-container").style.display = "block";
                         document.getElementById("seat-counter").style.display = "block";
+
+                        // Alerta de acceso: campanada triple + voz + flash verde
+                        flashPantalla(true);
+                        tocarCampana(1318, 600, 3); // Mi agudo: fanfarria de entrada
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+                        setTimeout(() => hablar('¡Es tu turno! Entra y selecciona tus butacas ahora.'), 800);
 
                         // Iniciamos el reloj visual leyendo el dato del servidor
                         iniciarTemporizador(data.timeout);
@@ -646,6 +725,146 @@
                 const banner = document.getElementById('disconnect-banner');
                 if (banner) banner.style.display = 'flex';
             };
+        }
+
+        // =====================================================================
+        //  COLA: tiempo estimado + alertas progresivas (sonido + visual)
+        // =====================================================================
+
+        // Cuántos minutos se estima por persona delante. Ajusta según tu evento.
+        const MINUTOS_POR_TURNO = 3;
+
+        // Rastreo de la última posición para no repetir alertas
+        let _ultimaPosicionAlertada = Infinity;
+
+        /** Actualiza el banner de cola con posición y ETA */
+        function actualizarBannerCola(pos) {
+            const banner = document.getElementById("status-banner");
+            const minutosEspera = (pos - 1) * MINUTOS_POR_TURNO;
+            let etaTexto = "";
+            if (minutosEspera <= 0) {
+                etaTexto = "¡Casi es tu turno!";
+            } else if (minutosEspera < 60) {
+                etaTexto = `Espera estimada: ~${minutosEspera} min`;
+            } else {
+                const h = Math.floor(minutosEspera / 60);
+                const m = minutosEspera % 60;
+                etaTexto = `Espera estimada: ~${h}h ${m > 0 ? m + 'min' : ''}`;
+            }
+
+            if (pos <= 2) {
+                banner.className = "queued-critical";
+            } else if (pos <= 5) {
+                banner.className = "queued-urgent";
+            } else {
+                banner.className = "queued";
+            }
+
+            banner.innerHTML = `Estás en la cola. Posición: <strong>${pos}</strong><br><span id="queue-eta">${etaTexto}</span>`;
+        }
+
+        /** Genera un pitido/campana con Web Audio API */
+        function tocarCampana(frecuencia = 880, duracionMs = 600, veces = 1) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const tocar = (delay) => {
+                    const osc  = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(frecuencia, ctx.currentTime + delay);
+                    gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + delay + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duracionMs / 1000);
+                    osc.start(ctx.currentTime + delay);
+                    osc.stop(ctx.currentTime + delay + duracionMs / 1000 + 0.05);
+                };
+                for (let i = 0; i < veces; i++) {
+                    tocar(i * (duracionMs / 1000 + 0.15));
+                }
+            } catch (e) {
+                console.warn('Web Audio no disponible:', e);
+            }
+        }
+
+        /** Lanza una locución de voz sintética */
+        function hablar(texto) {
+            if (!window.speechSynthesis) return;
+            // Cancelamos cualquier locución anterior
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(texto);
+            utter.lang = 'es-ES';
+            utter.rate = 0.95;
+            utter.pitch = 1.1;
+            window.speechSynthesis.speak(utter);
+        }
+
+        /** Parpadea el fondo de la página */
+        function flashPantalla(critico = false) {
+            const body = document.body;
+            const cls = critico ? 'anim-flash-critical' : 'anim-flash';
+            body.classList.remove('anim-flash', 'anim-flash-critical');
+            void body.offsetWidth; // reflow para reiniciar
+            body.classList.add(cls);
+            body.addEventListener('animationend', () => body.classList.remove(cls), { once: true });
+        }
+
+        /** Pulsa el banner */
+        function pulsarBanner(critico = false) {
+            const banner = document.getElementById("status-banner");
+            const cls = critico ? 'anim-pulse-critical' : 'anim-pulse-urgent';
+            banner.classList.remove('anim-pulse-urgent', 'anim-pulse-critical');
+            void banner.offsetWidth;
+            banner.classList.add(cls);
+            banner.addEventListener('animationend', () => banner.classList.remove(cls), { once: true });
+        }
+
+        /**
+         * Dispara alertas sensoriales escalonadas según posición en cola.
+         * Solo actúa cuando la posición baja (no sube).
+         */
+        function alertarPosicionCola(pos) {
+            // Solo alertamos si la posición mejora y es ≤ 5 (o llegamos a activo)
+            if (pos >= _ultimaPosicionAlertada) return;
+            _ultimaPosicionAlertada = pos;
+
+            if (pos === 1) {
+                // ¡Casi entrando! Alerta máxima
+                flashPantalla(true);
+                pulsarBanner(true);
+                tocarCampana(1046, 500, 3); // Do agudo, 3 campanadas
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+                setTimeout(() => hablar('¡Atención! Eres el siguiente. ¡Prepárate para reservar tus butacas!'), 600);
+
+            } else if (pos === 2) {
+                flashPantalla(true);
+                pulsarBanner(true);
+                tocarCampana(987, 450, 2);
+                if (navigator.vibrate) navigator.vibrate([200, 100, 300]);
+                setTimeout(() => hablar('¡Atención! Solo hay una persona delante de ti. Prepárate.'), 400);
+
+            } else if (pos === 3) {
+                flashPantalla(false);
+                pulsarBanner(false);
+                tocarCampana(880, 400, 2);
+                if (navigator.vibrate) navigator.vibrate([150, 80, 200]);
+                setTimeout(() => hablar('Posición tres en cola. Ya falta poco.'), 300);
+
+            } else if (pos === 4) {
+                flashPantalla(false);
+                pulsarBanner(false);
+                tocarCampana(784, 350, 1);
+                if (navigator.vibrate) navigator.vibrate([150]);
+                setTimeout(() => hablar('Posición cuatro en cola. Mantente atento.'), 200);
+
+            } else if (pos === 5) {
+                flashPantalla(false);
+                pulsarBanner(false);
+                tocarCampana(698, 300, 1);
+                if (navigator.vibrate) navigator.vibrate([100]);
+                setTimeout(() => hablar('Posición cinco en cola. Prepárate, pronto podrás reservar.'), 100);
+            }
         }
 
         function renderizarSesiones(seats) {
