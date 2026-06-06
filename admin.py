@@ -64,10 +64,19 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                         "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
                     )
 
-                    # 1. Borrar tabla completa y recrearla con el init_db() original
+                    # 1. Borrar tablas y recrearlas desde cero (incluye seed y cuotas)
                     async with aiosqlite.connect(state.DB_FILE) as db:
                         await db.execute("DROP TABLE IF EXISTS seats")
+                        await db.execute("DROP TABLE IF EXISTS queue")
+                        await db.execute("DROP TABLE IF EXISTS user_quotas")
+                        await db.execute("DROP TABLE IF EXISTS settings")
                         await db.commit()
+
+                    # Limpiar cuotas en memoria antes de que init_db las regenere
+                    state.USER_QUOTAS.clear()
+                    state.VALID_COMBINATIONS = set()
+                    state.SYSTEM_SEED = None
+
                     await init_db()
 
                     # 2. Expulsar a todos los clientes (Evitar estados corruptos)
@@ -90,9 +99,6 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                     state.active_users.clear()
                     async with state.queue_lock:
                         state.waiting_queue.clear()
-                        async with aiosqlite.connect(state.DB_FILE) as db:
-                            await db.execute("DROP TABLE IF EXISTS queue")
-                            await db.commit()
                     state.active_users_names.clear()
                     for task in list(state.active_user_tasks.values()):
                         task.cancel()
