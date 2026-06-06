@@ -438,8 +438,36 @@
     </div>
 
     <script>
+        let appUrl = 'https://claudia.fly.dev';
+
         // 1. Detección del Modo Dios
         const urlParams = new URLSearchParams(window.location.search);
+
+        // Detección de credenciales directas de autenticación
+        const authParam = urlParams.get('auth');
+        if (authParam) {
+            try {
+                // Decodificar Base64 de forma segura con UTF-8
+                const decodedCombo = decodeURIComponent(escape(atob(authParam)));
+                const parts = decodedCombo.split('_');
+                if (parts.length === 2) {
+                    const animal = parts[0];
+                    const adjetivo = parts[1];
+                    // Guardamos las credenciales en localStorage para que la app se inicie automáticamente
+                    localStorage.setItem("animal", animal);
+                    localStorage.setItem("adjetivo", adjetivo);
+                }
+            } catch (e) {
+                console.error("Error decodificando parámetro auth:", e);
+            }
+
+            // Limpiar la barra de direcciones inmediatamente sin recargar la página
+            urlParams.delete('auth');
+            const newSearch = urlParams.toString();
+            const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+            window.history.replaceState({}, document.title, newUrl);
+        }
+
         const adminSecret = localStorage.getItem('taquillaSecret');
         const isTaquilla = !!adminSecret;
 
@@ -476,6 +504,9 @@
             fetch("/api/config")
                 .then(res => res.json())
                 .then(data => {
+                    if (data.app_url) {
+                        appUrl = data.app_url;
+                    }
                     const animalsList = document.getElementById("animals-list");
                     const adjectivesList = document.getElementById("adjectives-list");
                     if (animalsList && data.animals) {
@@ -1165,7 +1196,7 @@
                     alert('No se pudo obtener tu enlace de transferencia. Intenta de nuevo.');
                     return;
                 }
-                const enlace = `https://claudia.fly.dev/transferencia?token=${encodeURIComponent(data.hash)}`;
+                const enlace = `${appUrl}/transferencia?token=${encodeURIComponent(data.hash)}`;
                 const mensaje = `Te paso un enlace para que me transfieras butacas a mi usuario, gracias\n${enlace}`;
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank');
             } catch (e) {

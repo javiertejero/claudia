@@ -485,7 +485,10 @@
                     }
                 }
             };
+
+            cargarCombinaciones();
         }
+
 
         function renderDashboard(seats) {
             const sesiones = ['11h', '12:45h', '18h'];
@@ -603,6 +606,15 @@
                 const data = await res.json();
                 allCombinations = data.combinations || [];
                 document.getElementById('combo-count').innerText = allCombinations.length;
+                if (data.app_url) {
+                    window.appUrl = data.app_url;
+                    const appLink = document.querySelector('.app-link');
+                    if (appLink) {
+                        appLink.href = data.app_url;
+                        const displayUrl = data.app_url.replace(/^https?:\/\//, '');
+                        appLink.innerHTML = `🌐 ${displayUrl}`;
+                    }
+                }
                 renderCombos(allCombinations);
             } catch (e) {
                 console.error('Error cargando combinaciones', e);
@@ -671,7 +683,10 @@
                 // El href se construye con la cuota del momento (puede actualizarse)
                 function buildWAHref(c, q) {
                     const nombre = c.replace('_', ' ');
-                    const msg = `Hola! Tu identidad para la reserva es: *${nombre}*. Tu número de derechos (cuota) es: *${q !== null ? q : '?'}*. Accede aquí: https://claudia.fly.dev`;
+                    const base64Combo = btoa(unescape(encodeURIComponent(c)));
+                    const baseUrl = window.appUrl || 'https://claudia.fly.dev';
+                    const directAccessUrl = `${baseUrl}/?auth=${base64Combo}`;
+                    const msg = `Hola! Tu identidad para la reserva es: *${nombre}*. Tu número de derechos (cuota) es: *${q !== null ? q : '?'}*. Accede aquí: ${directAccessUrl}`;
                     return `https://wa.me/?text=${encodeURIComponent(msg)}`;
                 }
                 btnWA.href = buildWAHref(combo, quota);
@@ -687,6 +702,7 @@
                 container.appendChild(el);
             });
         }
+
 
         function filtrarCombos(query) {
             const q = query.toLowerCase().replace(/[^a-z]/g, '');

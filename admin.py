@@ -131,7 +131,7 @@ async def list_combinations(secret: str):
         {"combo": combo, "quota": state.USER_QUOTAS.get(combo, 0)}
         for combo in sorted(state.VALID_COMBINATIONS)
     ]
-    return {"combinations": result}
+    return {"combinations": result, "app_url": state.APP_URL}
 
 
 @admin_router.get("/admin/{secret}/export.csv")

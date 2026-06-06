@@ -23,6 +23,9 @@ ADMIN_SECRET = os.getenv("CLAUDIA_SECRET", str(uuid.uuid4()))
 logger.debug("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
 admin_connections = set()
 
+APP_URL = os.getenv("APP_URL", "https://claudia.fly.dev")
+
+
 SYSTEM_SEED = None
 VALID_COMBINATIONS = set()
 NUM_VALID_COMBINATIONS = 200

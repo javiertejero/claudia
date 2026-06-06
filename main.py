@@ -352,7 +352,11 @@ async def get_transfer_page():
 
 @app.get("/api/config")
 async def get_config():
-    return {"animals": identity.ANIMALS, "adjectives": identity.ADJECTIVES}
+    return {
+        "animals": identity.ANIMALS,
+        "adjectives": identity.ADJECTIVES,
+        "app_url": state.APP_URL,
+    }
 
 
 @app.get("/api/mi-hash")
