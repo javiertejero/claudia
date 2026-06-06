@@ -103,4 +103,3 @@ async def toggle_seat(
                 return f"Has alcanzado tu límite de {user_quota} asiento{'s' if user_quota != 1 else ''}, tendrás que deseleccionar alguno..."
         await db.commit()
     return None
-

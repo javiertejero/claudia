@@ -391,7 +391,7 @@
     </div>
 
     <div id="seat-counter">
-        <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/6</div>
+        <div style="margin-bottom: 8px;">Butacas reservadas: <span id="seat-count">0</span>/<span id="seat-quota">6</span></div>
         <div id="warning-maximo"
             style="display: none; font-size: 0.75rem; font-weight: bold; color: #ffedd5; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px;">
             ⚠️ MÁXIMO ALCANZADO
@@ -541,6 +541,7 @@
         let wakeLock = null;
         let tiempoAgotadoFlag = false;
         let finalizado = false;
+        let userQuota = 6; // Cuota por defecto; se actualiza desde el servidor
         const ASIENTOS_POR_FILA = 20;
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
@@ -665,12 +666,26 @@
                         container.style.display = "none";
                         document.getElementById("seat-counter").style.display = "none"; // Ocultar contador de butacas reservadas cuando estás en cola
                     } else if (data.status === "active") {
+                        // Guardar cuota del usuario
+                        if (data.quota !== undefined) {
+                            userQuota = data.quota;
+                            const quotaEl = document.getElementById('seat-quota');
+                            if (quotaEl) quotaEl.innerText = userQuota;
+                        }
+
                         const banner = document.getElementById("status-banner");
                         banner.className = "active";
                         // Inyectamos el reloj visualmente en el banner
                         banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
-                        document.getElementById("sessions-container").style.display = "block";
-                        document.getElementById("seat-counter").style.display = "block";
+
+                        if (userQuota === 0) {
+                            banner.innerHTML = '❌ No tienes asientos asignados en este sorteo.';
+                            banner.className = 'active';
+                            document.getElementById('seat-counter').style.display = 'none';
+                        } else {
+                            document.getElementById("sessions-container").style.display = "block";
+                            document.getElementById("seat-counter").style.display = "block";
+                        }
 
                         // Alerta de acceso: campanada triple + voz + flash verde
                         flashPantalla(true);
@@ -926,7 +941,7 @@
             const warningMax = document.getElementById("warning-maximo");
             document.getElementById("seat-count").innerText = mySeatsCount;
 
-            if (mySeatsCount >= 6) {
+            if (mySeatsCount >= userQuota && userQuota > 0) {
                 counterDiv.style.background = "#b45309";
                 warningMax.style.display = "block";
             } else if (mySeatsCount > 0) {
@@ -1036,7 +1051,7 @@
 
                     btn.onclick = () => {
                         if (seat.status === "free") {
-                            if (mySeatsCount >= 6) {
+                            if (mySeatsCount >= userQuota) {
                                 const counterDiv = document.getElementById("seat-counter");
 
                                 // Reiniciamos la animación por si hace clics muy rápidos

@@ -10,7 +10,9 @@ from identity import generate_valid_combinations
 logger = logging.getLogger(__name__)
 
 # Total de cuotas que deben sumar todos los usuarios (243 asientos × 3 sesiones)
-TOTAL_CUOTAS = state.ASIENTOS_POR_FILA * state.FILAS * 3 + 3 * 3  # 729
+TOTAL_CUOTAS = (
+    state.ASIENTOS_POR_FILA * state.FILAS + 3
+) * 3  # (243 asientos/sesión) × 3 sesiones = 729
 
 
 async def init_db():
@@ -128,7 +130,9 @@ async def init_db():
         async with db.execute("SELECT user_id, quota FROM user_quotas") as cursor:
             rows = await cursor.fetchall()
             state.USER_QUOTAS = {r[0]: r[1] for r in rows}
-        logger.info("USER_QUOTAS cargado en memoria: %d entradas", len(state.USER_QUOTAS))
+        logger.info(
+            "USER_QUOTAS cargado en memoria: %d entradas", len(state.USER_QUOTAS)
+        )
 
         # Cargar cola persistida
         async with db.execute(

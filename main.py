@@ -458,12 +458,14 @@ async def websocket_endpoint(
             remaining = 0
 
         await websocket.send_text(
-            json.dumps({
-                "type": "status",
-                "status": "active",
-                "timeout": remaining,
-                "quota": state.USER_QUOTAS.get(client_id, 0),
-            })
+            json.dumps(
+                {
+                    "type": "status",
+                    "status": "active",
+                    "timeout": remaining,
+                    "quota": state.USER_QUOTAS.get(client_id, 0),
+                }
+            )
         )
         all_s = await seats.get_all_seats()
         sanitized_seats = seats.sanitize_seats(all_s, client_id)

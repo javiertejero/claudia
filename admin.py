@@ -159,8 +159,29 @@ async def export_csv(secret: str):
                 else:
                     fila = 12
                     fila12_nums = [
-                        22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2,
-                        1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23,
+                        22,
+                        20,
+                        18,
+                        16,
+                        14,
+                        12,
+                        10,
+                        8,
+                        6,
+                        4,
+                        2,
+                        1,
+                        3,
+                        5,
+                        7,
+                        9,
+                        11,
+                        13,
+                        15,
+                        17,
+                        19,
+                        21,
+                        23,
                     ]
                     butaca = fila12_nums[seat_id - 221]
 
@@ -212,12 +233,16 @@ async def upload_quotas(secret: str, request: Request):
                 quota = int(row.get("quota", "0").strip())
             except ValueError:
                 return JSONResponse(
-                    {"error": f"Cuota inválida para usuario '{user_id}'. Debe ser un número entero."},
+                    {
+                        "error": f"Cuota inválida para usuario '{user_id}'. Debe ser un número entero."
+                    },
                     status_code=422,
                 )
             if quota < 0 or quota > 6:
                 return JSONResponse(
-                    {"error": f"Cuota fuera de rango para '{user_id}': {quota}. Debe estar entre 0 y 6."},
+                    {
+                        "error": f"Cuota fuera de rango para '{user_id}': {quota}. Debe estar entre 0 y 6."
+                    },
                     status_code=422,
                 )
             if user_id not in state.VALID_COMBINATIONS:
