@@ -116,6 +116,8 @@ async def cleanup_waiting_queue():
             len(state.active_connections),
             len(state.waiting_queue),
         )
+        logger.info("Active users: %s", state.active_users)
+        logger.info("Waiting users: %s", state.waiting_queue)
         for active_user, timeout in state.active_user_expires.items():
             logger.info(f"User {active_user} expires at {timeout}")
 
@@ -202,11 +204,13 @@ async def expire_user_session(client_id: str):
         remaining = expires_at - time.time()
 
         if remaining > 0:
+            logger.info("User %s will expire after %s", client_id, remaining)
             await asyncio.sleep(remaining)
 
         # Al despertar, verificamos si realmente se ha agotado y sigue activo
-        if client_id in state.active_connections and client_id in state.active_users:
+        if client_id in state.active_users:
             if time.time() >= state.active_user_expires.get(client_id, 0):
+                logger.warning("Expiring user %s", client_id)
                 await state.active_connections[client_id].send_text(
                     json.dumps(
                         {
@@ -223,6 +227,14 @@ async def expire_user_session(client_id: str):
                 state.active_user_tasks.pop(client_id, None)
                 state.active_users.discard(client_id)
                 state.active_connections.pop(client_id, None)
+                await (
+                    process_queue()
+                )  # trigger process_queue to ensure we let the next user enter
+            else:
+                logger.warning(
+                    "User %s was not disconnected, probably reconnected with extension...",
+                    client_id,
+                )
     except asyncio.CancelledError:
         pass
 
