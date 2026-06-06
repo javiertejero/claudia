@@ -15,7 +15,7 @@ RATE_LIMIT = os.getenv("RATE_LIMIT", "True") != "False"
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 0
-SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
+SESSION_TIMEOUT = 20  # segundos para expiración de sesión de usuario
 active_user_tasks = {}  # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
 

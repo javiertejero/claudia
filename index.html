@@ -240,8 +240,15 @@
         }
 
         @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to   { transform: translateY(0);     opacity: 1; }
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         #disconnect-banner .disconnect-icon {
@@ -279,7 +286,8 @@
     <!-- Disconnect banner (hidden by default) -->
     <div id="disconnect-banner" role="alert" aria-live="assertive">
         <span class="disconnect-icon">⚠️</span>
-        <span class="disconnect-msg">Se ha perdido la conexión con el servidor. Tu posición en cola está guardada.</span>
+        <span class="disconnect-msg">Se ha perdido la conexión con el servidor. Tu posición en cola está
+            guardada.</span>
         <button id="btn-reconnect" onclick="window.location.reload()">&#128260; Reconectar</button>
     </div>
     <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
@@ -315,6 +323,8 @@
                 style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
                 💬 Enviar a WhatsApp
             </button>
+        </div>
+        <div id="finish-button">
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
             <button id="finalizar" onclick="finalizarReserva()"
                 style="cursor: pointer; padding: 8px; border-radius: 4px; border: none; background: #000; color: white; font-weight: bold; font-size: 0.9rem;">
@@ -637,6 +647,7 @@
 
             // 2. ACTUALIZAR WHATSAPP / PORTAPAPELES CON ANOMALÍA FILA 12
             const mySeats = seats.filter(seat => seat.is_mine);
+            
             if (mySeatsCount > 0) {
                 const nombreCompleto = clientId;
                 let resumen = `🎭 *Mis reservas - Espectáculo de Danza*\n👤 ${nombreCompleto}\n\n`;
@@ -669,6 +680,7 @@
                 textoReservasFormateado = resumen;
                 document.getElementById("action-buttons").style.display = "flex";
             } else {
+                // TODO: When 0 we should enable at least the guardar reserva
                 textoReservasFormateado = "";
                 document.getElementById("action-buttons").style.display = "none";
             }
@@ -866,9 +878,6 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ action: "finalizar" }));
             }
-
-            // Cerrar el websocket desencadena toda la limpieza en el servidor al instante
-            if (ws) ws.close();
             clearInterval(timerInterval);
             finalizado = true;
             liberarWakeLock(); // liberamos wake lock

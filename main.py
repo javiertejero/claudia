@@ -513,6 +513,7 @@ async def websocket_endpoint(
                 state.active_users.discard(client_id)
                 state.active_connections.pop(client_id, None)
                 state.active_users_names.pop(client_id, None)
+                state.active_user_expires.pop(client_id, None)
                 await process_queue()
                 await broadcast.broadcast_seats()
                 break
