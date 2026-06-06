@@ -55,7 +55,8 @@ async def reserve_seats(client_id: str):
 async def toggle_seat(
     client_id: str, seat_num: int, sess_time: str, user_full_name: str
 ) -> str | None:
-    # Retorna mensaje de error si se alcanza el límite de 6 y no se puede reservar más, de lo contrario None.
+    # Retorna mensaje de error si se alcanza la cuota del usuario, de lo contrario None.
+    user_quota = state.USER_QUOTAS.get(client_id, 0)
     async with aiosqlite.connect(state.DB_FILE) as db:
         # Contamos cuántos asientos tiene ya (reserved o reserving)
         async with db.execute(
@@ -63,7 +64,10 @@ async def toggle_seat(
         ) as cursor:
             user_seats_count = (await cursor.fetchone())[0]
 
-        if user_seats_count < 6:
+        if user_quota == 0:
+            return "No tienes asientos asignados en este sorteo."
+
+        if user_seats_count < user_quota:
             # Intentamos marcar como 'reserving'
             cursor = await db.execute(
                 """
@@ -85,7 +89,7 @@ async def toggle_seat(
                     (seat_num, sess_time, client_id),
                 )
         else:
-            # Si ya tiene 6, solo puede liberar
+            # Si ya tiene todos sus derechos usados, solo puede liberar
             cursor = await db.execute(
                 """
                 UPDATE seats 
@@ -96,6 +100,6 @@ async def toggle_seat(
             )
 
             if cursor.rowcount == 0:
-                return "Has alcanzado el límite de 6, tendrás que deseleccionar algún asiento..."
+                return f"Has alcanzado tu límite de {user_quota} asiento{'s' if user_quota != 1 else ''}, tendrás que deseleccionar alguno..."
         await db.commit()
     return None

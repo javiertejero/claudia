@@ -313,13 +313,14 @@ async def process_queue():
 
         if next_client in state.active_connections:
             ws = state.active_connections[next_client]
-            # Pasamos el tiempo al cliente para que pinte su reloj
+            # Pasamos el tiempo y cuota al cliente para que pinte su reloj e indicador
             await ws.send_text(
                 json.dumps(
                     {
                         "type": "status",
                         "status": "active",
                         "timeout": state.SESSION_TIMEOUT,
+                        "quota": state.USER_QUOTAS.get(next_client, 0),
                     }
                 )
             )
@@ -457,7 +458,14 @@ async def websocket_endpoint(
             remaining = 0
 
         await websocket.send_text(
-            json.dumps({"type": "status", "status": "active", "timeout": remaining})
+            json.dumps(
+                {
+                    "type": "status",
+                    "status": "active",
+                    "timeout": remaining,
+                    "quota": state.USER_QUOTAS.get(client_id, 0),
+                }
+            )
         )
         all_s = await seats.get_all_seats()
         sanitized_seats = seats.sanitize_seats(all_s, client_id)
@@ -491,6 +499,7 @@ async def websocket_endpoint(
                         "type": "status",
                         "status": "active",
                         "timeout": state.SESSION_TIMEOUT,
+                        "quota": state.USER_QUOTAS.get(client_id, 0),
                     }
                 )
             )

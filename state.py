@@ -36,3 +36,7 @@ queue_lock = asyncio.Lock()
 active_users = set()
 ASIENTOS_POR_FILA = 20
 FILAS = 12
+
+# Cuotas/derechos por usuario: espejo en memoria de la tabla user_quotas.
+# La suma total debe ser siempre ASIENTOS_POR_FILA * FILAS * 3 + 3*3 = 729
+USER_QUOTAS: dict[str, int] = {}
