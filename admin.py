@@ -5,11 +5,11 @@ import logging
 import math
 
 import aiosqlite
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 import state
-from bootstrap_db import init_db, save_state_to_db
+from bootstrap_db import TOTAL_CUOTAS, init_db, save_state_to_db
 from broadcast import broadcast_admin_stats
 from seats import get_all_seats
 
@@ -121,7 +121,11 @@ async def admin_websocket(websocket: WebSocket, secret: str):
 async def list_combinations(secret: str):
     if secret != state.ADMIN_SECRET:
         return {"error": "No autorizado"}
-    return {"combinations": sorted(state.VALID_COMBINATIONS)}
+    result = [
+        {"combo": combo, "quota": state.USER_QUOTAS.get(combo, 0)}
+        for combo in sorted(state.VALID_COMBINATIONS)
+    ]
+    return {"combinations": result}
 
 
 @admin_router.get("/admin/{secret}/export.csv")
@@ -155,29 +159,8 @@ async def export_csv(secret: str):
                 else:
                     fila = 12
                     fila12_nums = [
-                        22,
-                        20,
-                        18,
-                        16,
-                        14,
-                        12,
-                        10,
-                        8,
-                        6,
-                        4,
-                        2,
-                        1,
-                        3,
-                        5,
-                        7,
-                        9,
-                        11,
-                        13,
-                        15,
-                        17,
-                        19,
-                        21,
-                        23,
+                        22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2,
+                        1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23,
                     ]
                     butaca = fila12_nums[seat_id - 221]
 
@@ -189,3 +172,93 @@ async def export_csv(secret: str):
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="reservas.csv"'},
     )
+
+
+@admin_router.get("/admin/{secret}/quotas.csv")
+async def download_quotas(secret: str):
+    """Descarga las cuotas/derechos de todos los usuarios en formato CSV."""
+    if secret != state.ADMIN_SECRET:
+        return {"error": "No autorizado"}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["user_id", "quota"])
+    for combo in sorted(state.VALID_COMBINATIONS):
+        writer.writerow([combo, state.USER_QUOTAS.get(combo, 0)])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="cuotas.csv"'},
+    )
+
+
+@admin_router.post("/admin/{secret}/quotas.csv")
+async def upload_quotas(secret: str, request: Request):
+    """Carga cuotas desde un CSV. Valida que la suma total == TOTAL_CUOTAS (729).
+    Si es válido, reemplaza la tabla user_quotas y actualiza el espejo en memoria."""
+    if secret != state.ADMIN_SECRET:
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+
+    body = await request.body()
+    try:
+        text = body.decode("utf-8")
+        reader = csv.DictReader(io.StringIO(text))
+        new_quotas: dict[str, int] = {}
+        for row in reader:
+            user_id = row.get("user_id", "").strip()
+            try:
+                quota = int(row.get("quota", "0").strip())
+            except ValueError:
+                return JSONResponse(
+                    {"error": f"Cuota inválida para usuario '{user_id}'. Debe ser un número entero."},
+                    status_code=422,
+                )
+            if quota < 0 or quota > 6:
+                return JSONResponse(
+                    {"error": f"Cuota fuera de rango para '{user_id}': {quota}. Debe estar entre 0 y 6."},
+                    status_code=422,
+                )
+            if user_id not in state.VALID_COMBINATIONS:
+                return JSONResponse(
+                    {"error": f"Usuario desconocido en CSV: '{user_id}'."},
+                    status_code=422,
+                )
+            new_quotas[user_id] = quota
+
+        # Rellenar con 0 los usuarios válidos no presentes en el CSV
+        for combo in state.VALID_COMBINATIONS:
+            if combo not in new_quotas:
+                new_quotas[combo] = 0
+
+        total = sum(new_quotas.values())
+        if total != TOTAL_CUOTAS:
+            return JSONResponse(
+                {
+                    "error": (
+                        f"La suma de cuotas es {total}, pero debe ser exactamente {TOTAL_CUOTAS}. "
+                        f"Diferencia: {total - TOTAL_CUOTAS:+d}."
+                    )
+                },
+                status_code=422,
+            )
+
+        # Actualizar base de datos
+        async with aiosqlite.connect(state.DB_FILE) as db:
+            await db.execute("DELETE FROM user_quotas")
+            await db.executemany(
+                "INSERT INTO user_quotas (user_id, quota) VALUES (?, ?)",
+                list(new_quotas.items()),
+            )
+            await db.commit()
+
+        # Actualizar espejo en memoria
+        state.USER_QUOTAS = new_quotas
+        logger.info("Cuotas actualizadas por admin. Suma total: %d", total)
+
+        return JSONResponse({"ok": True, "total": total, "usuarios": len(new_quotas)})
+
+    except Exception as e:
+        logger.error("Error procesando CSV de cuotas: %s", e)
+        return JSONResponse({"error": f"Error procesando CSV: {e}"}, status_code=500)
