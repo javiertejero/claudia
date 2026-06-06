@@ -236,10 +236,10 @@ async def adjust_quota(secret: str, user_id: str, request: Request):
     current = state.USER_QUOTAS.get(user_id, 0)
     new_quota = current + delta
 
-    if new_quota < 0 or new_quota > 6:
+    if new_quota < 0 or new_quota > 20:
         return JSONResponse(
             {
-                "error": f"Cuota resultante fuera de rango: {new_quota}. Debe estar entre 0 y 6."
+                "error": f"Cuota resultante fuera de rango: {new_quota}. Debe estar entre 0 y 20."
             },
             status_code=422,
         )
@@ -288,10 +288,10 @@ async def upload_quotas(secret: str, request: Request):
                     },
                     status_code=422,
                 )
-            if quota < 0 or quota > 6:
+            if quota < 0 or quota > 20:
                 return JSONResponse(
                     {
-                        "error": f"Cuota fuera de rango para '{user_id}': {quota}. Debe estar entre 0 y 6."
+                        "error": f"Cuota fuera de rango para '{user_id}': {quota}. Debe estar entre 0 y 20."
                     },
                     status_code=422,
                 )

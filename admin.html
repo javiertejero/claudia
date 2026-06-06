@@ -603,7 +603,7 @@
 
                     const badge = document.createElement('span');
                     badge.className = 'quota-badge ' + (
-                        quota === 0 ? 'ghost' : quota <= 3 ? 'low' : 'high'
+                        quota === 0 ? 'ghost' : quota <= 10 ? 'low' : 'high'
                     );
                     badge.textContent = quota === 0 ? '✕ 0' : `✦ ${quota}`;
                     badge.dataset.quota = quota;
@@ -611,7 +611,7 @@
                     const btnInc = document.createElement('button');
                     btnInc.textContent = '+';
                     btnInc.title = 'Aumentar cuota';
-                    btnInc.disabled = quota >= 6;
+                    btnInc.disabled = quota >= 20;
                     btnInc.addEventListener('click', (e) => { e.stopPropagation(); ajustarCuota(combo, 1, el); });
 
                     stepper.appendChild(btnDec);
@@ -668,12 +668,12 @@
                 const btnInc = itemEl.querySelector('.quota-stepper button:last-child');
 
                 badge.className = 'quota-badge ' + (
-                    newQuota === 0 ? 'ghost' : newQuota <= 3 ? 'low' : 'high'
+                    newQuota === 0 ? 'ghost' : newQuota <= 10 ? 'low' : 'high'
                 );
                 badge.textContent = newQuota === 0 ? '✕ 0' : `✦ ${newQuota}`;
                 badge.dataset.quota = newQuota;
                 btnDec.disabled = newQuota <= 0;
-                btnInc.disabled = newQuota >= 6;
+                btnInc.disabled = newQuota >= 20;
 
                 // 3. Banner de overbooking
                 const banner  = document.getElementById('overbooking-banner');
