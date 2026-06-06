@@ -469,6 +469,18 @@ async def websocket_endpoint(
             await websocket.send_text(
                 json.dumps({"type": "seats_update", "seats": sanitized_seats})
             )
+            # If no time remaining, schedule disconnect after 3 seconds
+            if remaining == 0:
+
+                async def _delayed_disconnect():
+                    await asyncio.sleep(3)
+                    try:
+                        await websocket.close()
+                    except Exception:
+                        pass
+                    state.active_user_expires.pop(client_id, None)
+
+                asyncio.create_task(_delayed_disconnect())
         else:
             async with state.queue_lock:
                 state.waiting_queue.append(client_id)

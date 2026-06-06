@@ -16,4 +16,5 @@ extend-select = ["I"]
 [dependency-groups]
 dev = [
     "prek>=0.4.4",
+    "ruff>=0.15.16",
 ]
