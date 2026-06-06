@@ -41,8 +41,8 @@ def reset_state():
 
 
 @pytest.mark.anyio
-async def test_expire_user_session_releases_reserving_seats():
-    # 1. Initialize database and add a user with some reserving seats
+async def test_expire_user_session_keeps_reserved_seats():
+    # 1. Initialize database and add a user with some reserved seats
     await init_db()
 
     client_id = "delfin_valiente"
@@ -51,18 +51,18 @@ async def test_expire_user_session_releases_reserving_seats():
     state.active_users.add(client_id)
     state.active_users_names[client_id] = "Delfin Valiente"
 
-    # Toggle a seat to put it in 'reserving' status
+    # Toggle a seat to put it in 'reserved' status
     err = await seats.toggle_seat(client_id, 1, "11h", "Delfin Valiente")
     assert err is None
 
-    # Verify the seat is reserving in the DB
+    # Verify the seat is reserved in the DB
     async with aiosqlite.connect(state.DB_FILE) as db:
         async with db.execute(
             "SELECT status, owner_id FROM seats WHERE seat_number = 1 AND session_time = '11h'"
         ) as cursor:
             row = await cursor.fetchone()
             assert row is not None
-            assert row[0] == "reserving"
+            assert row[0] == "reserved"
             assert row[1] == client_id
 
     # 2. Mock WebSocket connection
@@ -87,13 +87,13 @@ async def test_expire_user_session_releases_reserving_seats():
     assert client_id not in state.active_connections
     assert client_id not in state.active_users_names
 
-    # 5. Verify the seat was released (changed back to free) in the DB
+    # 5. Verify the seat remained reserved in the DB
     async with aiosqlite.connect(state.DB_FILE) as db:
         async with db.execute(
             "SELECT status, owner_id, owner_name FROM seats WHERE seat_number = 1 AND session_time = '11h'"
         ) as cursor:
             row = await cursor.fetchone()
             assert row is not None
-            assert row[0] == "free"
-            assert row[1] is None
-            assert row[2] is None
+            assert row[0] == "reserved"
+            assert row[1] == client_id
+            assert row[2] == "Delfin Valiente"

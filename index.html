@@ -683,16 +683,7 @@
             style="display: none; font-size: 0.75rem; font-weight: bold; color: #ffedd5; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px;">
             ⚠️ MÁXIMO ALCANZADO
         </div>
-        <div id="action-buttons" style="display: none; gap: 8px; flex-direction: column;">
-            <button onclick="copiarReservas()"
-                style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.8rem;">
-                📋 Copiar
-            </button>
-            <button onclick="compartirWhatsApp()"
-                style="cursor: pointer; padding: 6px; border-radius: 4px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.8rem;">
-                💬 Enviar a WhatsApp
-            </button>
-        </div>
+
         <div id="finish-button">
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
             <button id="finalizar" onclick="finalizarReserva()"
@@ -869,6 +860,75 @@
         const mitad = ASIENTOS_POR_FILA / 2;
         let ws;
         let clientId = localStorage.getItem("clientId");
+
+        let autoSaveTimeout = null;
+        let autoSaveInterval = null;
+        let autoSaveCancelled = false;
+
+        function iniciarAutoGuardado() {
+            if (autoSaveTimeout || autoSaveCancelled || finalizado || tiempoAgotadoFlag) return;
+
+            let countdown = 15;
+            const banner = document.getElementById("status-banner");
+            if (!banner) return;
+
+            // Guardamos el timer-display actual si existe
+            const display = document.getElementById("timer-display");
+            const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+
+            function actualizarBannerConCountdown() {
+                banner.className = "active";
+                banner.style.background = "#065f46"; // Un verde oscuro indicando éxito pero temporizado
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; gap: 8px;">
+                        <div>
+                            ¡Cupo completo! Guardando reserva en 
+                            <strong id="auto-save-timer" style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${countdown}</strong>s...
+                            <button onclick="cancelarAutoGuardado(true)" style="margin-left: 10px; padding: 2px 6px; font-size: 0.8rem; background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: bold;">Cancelar</button>
+                        </div>
+                        ${timerHtml}
+                    </div>
+                `;
+            }
+
+            actualizarBannerConCountdown();
+
+            autoSaveInterval = setInterval(() => {
+                countdown--;
+                const timerEl = document.getElementById("auto-save-timer");
+                if (timerEl) {
+                    timerEl.innerText = countdown;
+                }
+                if (countdown <= 0) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                    finalizarReserva(true); // Auto-guardado
+                }
+            }, 1000);
+
+            autoSaveTimeout = true; // Flag para indicar que está en progreso
+        }
+
+        function cancelarAutoGuardado(manual = false) {
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+                autoSaveInterval = null;
+            }
+            autoSaveTimeout = null;
+            if (manual) {
+                autoSaveCancelled = true;
+            }
+
+            // Restaurar banner normal
+            const banner = document.getElementById("status-banner");
+            if (banner) {
+                banner.className = "active";
+                banner.style.background = ""; // Restaurar color original del CSS (.active)
+                const display = document.getElementById("timer-display");
+                const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. ${timerHtml}`;
+            }
+        }
 
         // Función para solicitar el bloqueo de pantalla
         async function solicitarWakeLock() {
@@ -1266,11 +1326,9 @@
                     resumen += `• Sesión ${seat.session_time}: Fila ${fila}, Butaca ${butaca}\n`;
                 });
                 textoReservasFormateado = resumen;
-                document.getElementById("action-buttons").style.display = "flex";
             } else {
                 // TODO: When 0 we should enable at least the guardar reserva
                 textoReservasFormateado = "";
-                document.getElementById("action-buttons").style.display = "none";
             }
 
             // 3. ACTUALIZAR CONTADOR VISUAL
@@ -1287,6 +1345,13 @@
             } else {
                 counterDiv.style.background = "#1e293b";
                 warningMax.style.display = "none";
+            }
+
+            if (mySeatsCount < userQuota) {
+                autoSaveCancelled = false; // Reset cancellation if they go below quota
+                cancelarAutoGuardado(false);
+            } else if (mySeatsCount === userQuota && userQuota > 0) {
+                iniciarAutoGuardado();
             }
 
             // 4. RENDERIZAR LAS BUTACAS
@@ -1492,8 +1557,13 @@
             }, 1000);
         }
 
-        function finalizarReserva() {
-            if (!confirm("¿Seguro que has terminado? Saldrás de la sala y dejarás paso a la siguiente persona.")) return;
+        function finalizarReserva(isAutoSave = false) {
+            if (!isAutoSave) {
+                if (!confirm("¿Seguro que has terminado? Saldrás de la sala y dejarás paso a la siguiente persona.")) return;
+            }
+
+            // Cancelar el auto-guardado por si acaso
+            cancelarAutoGuardado(false);
 
             // Enviar mensaje de finalización por websocket antes de cerrar
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -1503,17 +1573,41 @@
             finalizado = true;
             liberarWakeLock(); // liberamos wake lock
 
-            document.getElementById("finalizar").style.display = "none";
+            const displayFinalizar = document.getElementById("finalizar");
+            if (displayFinalizar) displayFinalizar.style.display = "none";
 
             const footerTaq = isTaquilla
                 ? `<button onclick="window.location.reload()" style="margin-top: 1.5rem; background: #d97706; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Siguiente Espectador ➔</button> <button onclick="window.location = '/admin'" style="margin-top: 1.5rem; background: #d97706; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">Volver a Admin</button>`
                 : `<p>Ya puedes cerrar esta ventana.</p>`;
 
             // Pantalla de agradecimiento
+            let summaryHtml = "";
+            if (textoReservasFormateado) {
+                const formattedSummary = textoReservasFormateado
+                    .replace(/\*/g, "") // quitar negritas de markdown para whatsapp
+                    .replace(/\n/g, "<br>");
+                summaryHtml = `
+                    <div style="text-align: left; margin: 1.5rem 0; padding: 1.2rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 0.9rem; max-height: 180px; overflow-y: auto; color: #e2e8f0; line-height: 1.5;">
+                        ${formattedSummary}
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-direction: column; margin-bottom: 1.5rem; width: 100%;">
+                        <button onclick="copiarReservas()"
+                            style="cursor: pointer; padding: 10px; border-radius: 6px; border: none; background: #f8fafc; color: #0f172a; font-weight: bold; font-size: 0.9rem; width: 100%;">
+                            📋 Copiar al portapapeles
+                        </button>
+                        <button onclick="compartirWhatsApp()"
+                            style="cursor: pointer; padding: 10px; border-radius: 6px; border: none; background: #25D366; color: white; font-weight: bold; font-size: 0.9rem; width: 100%;">
+                            💬 Enviar por WhatsApp
+                        </button>
+                    </div>
+                `;
+            }
+
             document.getElementById("app-screen").innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
                     <h2 style="color: #22c55e; margin-top: 0;">✅ ¡Reserva Guardada!</h2>
                     <p>Tus butacas han quedado registradas correctamente en el sistema.</p>
+                    ${summaryHtml}
                     ${footerTaq}
                 </div>
             `;

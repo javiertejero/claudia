@@ -26,32 +26,6 @@ async def get_all_seats():
             return [dict(r) for r in rows]  # Convertimos la fila a diccionario completo
 
 
-async def release_reserving_seats(client_id: str):
-    async with aiosqlite.connect(state.DB_FILE) as db:
-        await db.execute(
-            """
-            UPDATE seats 
-            SET status = "free", owner_id = NULL, owner_name = NULL 
-            WHERE owner_id = ? AND status = "reserving"
-        """,
-            (client_id,),
-        )
-        await db.commit()
-
-
-async def reserve_seats(client_id: str):
-    async with aiosqlite.connect(state.DB_FILE) as db:
-        await db.execute(
-            """
-            UPDATE seats 
-            SET status = "reserved" 
-            WHERE owner_id = ? AND status = "reserving"
-        """,
-            (client_id,),
-        )
-        await db.commit()
-
-
 async def toggle_seat(
     client_id: str, seat_num: int, sess_time: str, user_full_name: str
 ) -> str | None:
@@ -68,11 +42,11 @@ async def toggle_seat(
             return "No tienes asientos asignados en este sorteo."
 
         if user_seats_count < user_quota:
-            # Intentamos marcar como 'reserving'
+            # Intentamos marcar como 'reserved'
             cursor = await db.execute(
                 """
                 UPDATE seats 
-                SET status = "reserving", owner_id = ?, owner_name = ? 
+                SET status = "reserved", owner_id = ?, owner_name = ? 
                 WHERE seat_number = ? AND session_time = ? AND status = "free"
             """,
                 (client_id, user_full_name, seat_num, sess_time),

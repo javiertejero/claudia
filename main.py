@@ -135,15 +135,6 @@ async def cleanup_waiting_queue():
                 stale_active,
             )
             for client_id in stale_active:
-                # Release any in-progress seat reservations
-                try:
-                    await seats.release_reserving_seats(client_id)
-                except Exception as e:
-                    logger.error(
-                        "Error limpiando reservas de usuario inactivo %s: %s",
-                        client_id,
-                        e,
-                    )
                 # Cancel session-expiry task
                 if client_id in state.active_user_tasks:
                     state.active_user_tasks[client_id].cancel()
@@ -247,14 +238,6 @@ async def expire_user_session(client_id: str):
                 except Exception as e:
                     # es probable que esté ya cerrada, suele pasar
                     logger.warning("Error cerrando conexión a %s: %s", client_id, e)
-                try:
-                    await seats.release_reserving_seats(client_id)
-                except Exception as e:
-                    logger.error(
-                        "Error limpiando reservas de usuario expirado %s: %s",
-                        client_id,
-                        e,
-                    )
                 state.active_user_expires.pop(client_id, None)
                 state.active_user_tasks.pop(client_id, None)
                 state.active_users.discard(client_id)
@@ -789,7 +772,6 @@ async def websocket_endpoint(
             action = payload.get("action")
 
             if action == "finalizar":
-                await seats.reserve_seats(client_id)
                 await websocket.close()
                 state.active_users.discard(client_id)
                 state.active_connections.pop(client_id, None)
