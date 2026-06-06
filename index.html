@@ -640,6 +640,13 @@
 
         function renderizarSesiones(seats) {
             const container = document.getElementById("sessions-container");
+
+            // Preservar el scroll horizontal de cada bloque antes de re-renderizar
+            const scrollMap = {};
+            container.querySelectorAll(".session-block").forEach((block, i) => {
+                scrollMap[i] = block.scrollLeft;
+            });
+
             container.innerHTML = "";
 
             // 1. Calculamos butacas
@@ -823,6 +830,11 @@
                 block.appendChild(grid);
                 block.appendChild(gridFila12);
                 container.appendChild(block);
+            });
+
+            // Restaurar el scroll horizontal de cada bloque tras re-renderizar
+            container.querySelectorAll(".session-block").forEach((block, i) => {
+                if (scrollMap[i]) block.scrollLeft = scrollMap[i];
             });
         }
         function copiarReservas() {
