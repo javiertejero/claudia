@@ -44,9 +44,26 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS user_quotas (
                 user_id TEXT PRIMARY KEY,
-                quota INTEGER DEFAULT 0
+                quota INTEGER DEFAULT 0,
+                hash_transferencia TEXT UNIQUE
             )
         """)
+
+        # Migración lazy: si falta la columna hash_transferencia, borrar y recrear la tabla.
+        # (El sistema no está en producción, no es necesario preservar datos.)
+        async with db.execute("PRAGMA table_info(user_quotas)") as cursor:
+            columns = [row[1] for row in await cursor.fetchall()]
+        if "hash_transferencia" not in columns:
+            await db.execute("DROP TABLE IF EXISTS user_quotas")
+            await db.execute("""
+                CREATE TABLE user_quotas (
+                    user_id TEXT PRIMARY KEY,
+                    quota INTEGER DEFAULT 0,
+                    hash_transferencia TEXT UNIQUE
+                )
+            """)
+            await db.commit()
+            logger.info("user_quotas recreada con columna hash_transferencia.")
 
         # Cargar o generar la semilla persistida únicamente en la base de datos
         async with db.execute(
@@ -106,17 +123,18 @@ async def init_db():
             rows_to_insert = []
             remaining = TOTAL_CUOTAS  # 729
             for combo in sorted_combos:
+                hash_t = secrets.token_urlsafe(16)
                 if remaining >= 6:
-                    rows_to_insert.append((combo, 6))
+                    rows_to_insert.append((combo, 6, hash_t))
                     remaining -= 6
                 elif remaining > 0:
-                    rows_to_insert.append((combo, remaining))
+                    rows_to_insert.append((combo, remaining, hash_t))
                     remaining = 0
                 else:
-                    rows_to_insert.append((combo, 0))
+                    rows_to_insert.append((combo, 0, hash_t))
 
             await db.executemany(
-                "INSERT INTO user_quotas (user_id, quota) VALUES (?, ?)",
+                "INSERT INTO user_quotas (user_id, quota, hash_transferencia) VALUES (?, ?, ?)",
                 rows_to_insert,
             )
             await db.commit()
@@ -126,12 +144,37 @@ async def init_db():
                 sum(r[1] for r in rows_to_insert),
             )
 
-        # Cargar cuotas en memoria
-        async with db.execute("SELECT user_id, quota FROM user_quotas") as cursor:
+        # Generar hashes para filas que tengan NULL (usuarios pre-existentes sin hash)
+        async with db.execute(
+            "SELECT user_id FROM user_quotas WHERE hash_transferencia IS NULL"
+        ) as cursor:
+            sin_hash = [row[0] for row in await cursor.fetchall()]
+        for uid in sin_hash:
+            new_hash = secrets.token_urlsafe(16)
+            await db.execute(
+                "UPDATE user_quotas SET hash_transferencia = ? WHERE user_id = ?",
+                (new_hash, uid),
+            )
+        if sin_hash:
+            await db.commit()
+            logger.info(
+                "Hashes de transferencia generados para %d usuarios.", len(sin_hash)
+            )
+
+        # Cargar cuotas y hashes en memoria
+        async with db.execute(
+            "SELECT user_id, quota, hash_transferencia FROM user_quotas"
+        ) as cursor:
             rows = await cursor.fetchall()
             state.USER_QUOTAS = {r[0]: r[1] for r in rows}
+            state.USER_TRANSFER_HASHES = {r[0]: r[2] for r in rows if r[2] is not None}
+            state.HASH_TO_USER = {r[2]: r[0] for r in rows if r[2] is not None}
         logger.info(
             "USER_QUOTAS cargado en memoria: %d entradas", len(state.USER_QUOTAS)
+        )
+        logger.info(
+            "USER_TRANSFER_HASHES cargado en memoria: %d entradas",
+            len(state.USER_TRANSFER_HASHES),
         )
 
         # Cargar cola persistida

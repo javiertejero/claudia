@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferencia de Cuota · Claudia</title>
+    <meta name="description" content="Transfiere tus butacas a otro usuario del espectáculo de Claudia.">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.6));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .logo h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fbbf24;
+            letter-spacing: -0.02em;
+        }
+
+        .logo p {
+            font-size: 0.82rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        /* Steps */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        .step-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            color: #f1f5f9;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 1rem;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.06);
+        }
+
+        input[type="text"]::placeholder { color: #475569; }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            font-family: inherit;
+        }
+
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .info-box {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-box .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 0.25rem 0;
+        }
+
+        .info-box .info-row span:first-child { color: #94a3b8; }
+        .info-box .info-row span:last-child { color: #fbbf24; font-weight: 600; }
+
+        .success-icon {
+            font-size: 4rem;
+            text-align: center;
+            display: block;
+            margin: 0.5rem 0 1rem;
+            animation: pop 0.4s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .success-text {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #4ade80;
+            margin-bottom: 0.5rem;
+        }
+
+        .success-sub {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(15,23,42,0.3);
+            border-top-color: #0f172a;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.25rem;
+            font-size: 0.82rem;
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: #94a3b8; }
+
+        datalist { display: none; }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="logo">
+            <span class="logo-icon">🎭</span>
+            <h1>Transferencia de Cuota</h1>
+            <p>Espectáculo de Claudia</p>
+        </div>
+
+        <!-- PASO 1: Autenticación del emisor -->
+        <div id="step-auth" class="step active">
+            <p class="step-title">Identifícate</p>
+            <p class="step-desc">
+                Alguien quiere que le transfieras sus butacas.<br>
+                Introduce tu identidad (Animal + Adjetivo) para continuar.
+            </p>
+
+            <div id="error-auth" class="error-msg"></div>
+
+            <label for="input-animal">Animal</label>
+            <input type="text" id="input-animal" placeholder="Ej: Delfín" list="animals-list" autofocus>
+            <datalist id="animals-list"></datalist>
+
+            <label for="input-adjetivo">Adjetivo</label>
+            <input type="text" id="input-adjetivo" placeholder="Ej: Valiente" list="adjectives-list">
+            <datalist id="adjectives-list"></datalist>
+
+            <button class="btn-primary" id="btn-auth" onclick="autenticar()">
+                Continuar →
+            </button>
+
+            <a href="/" class="back-link">← Volver a la reserva</a>
+        </div>
+
+        <!-- PASO 2: Confirmación de transferencia -->
+        <div id="step-transfer" class="step">
+            <p class="step-title">Confirmar transferencia</p>
+            <p class="step-desc">
+                El destinatario es un usuario verificado del sistema.<br>
+                Elige cuántas butacas quieres cederle.
+            </p>
+
+            <div id="error-transfer" class="error-msg"></div>
+
+            <div class="info-box" id="info-box">
+                <div class="info-row">
+                    <span>Tu cuota actual</span>
+                    <span id="info-cuota">—</span>
+                </div>
+                <div class="info-row">
+                    <span>Butacas ya reservadas</span>
+                    <span id="info-reservadas">—</span>
+                </div>
+                <div class="info-row">
+                    <span>Máximo transferible</span>
+                    <span id="info-max">—</span>
+                </div>
+            </div>
+
+            <label for="input-butacas">Butacas a transferir</label>
+            <input type="number" id="input-butacas" min="1" value="1">
+
+            <button class="btn-primary" id="btn-confirm" onclick="confirmarTransferencia()">
+                ✅ Confirmar transferencia
+            </button>
+
+            <a href="/" class="back-link">← Cancelar y volver</a>
+        </div>
+
+        <!-- PASO 3: Éxito -->
+        <div id="step-success" class="step">
+            <span class="success-icon">🎉</span>
+            <p class="success-text" id="success-text">¡Transferencia completada!</p>
+            <p class="success-sub" id="success-sub"></p>
+            <button class="btn-primary" onclick="window.location.href='/'">
+                Volver a la reserva
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Estado global ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token') || '';
+        let emisorId = '';
+        let maxTransferibles = 0;
+
+        // --- Cargar autocomplete ---
+        fetch('/api/config')
+            .then(r => r.json())
+            .then(data => {
+                const al = document.getElementById('animals-list');
+                const adj = document.getElementById('adjectives-list');
+                (data.animals || []).forEach(a => {
+                    const o = document.createElement('option'); o.value = a; al.appendChild(o);
+                });
+                (data.adjectives || []).forEach(a => {
+                    const o = document.createElement('option'); o.value = a; adj.appendChild(o);
+                });
+            })
+            .catch(() => {});
+
+        // Intentar auto-login si hay credenciales guardadas en localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            const a = localStorage.getItem('animal');
+            const adj = localStorage.getItem('adjetivo');
+            if (a) document.getElementById('input-animal').value = a;
+            if (adj) document.getElementById('input-adjetivo').value = adj;
+
+            // Enter para avanzar
+            ['input-animal', 'input-adjetivo'].forEach(id => {
+                document.getElementById(id).addEventListener('keydown', e => {
+                    if (e.key === 'Enter') autenticar();
+                });
+            });
+
+            if (!token) {
+                showError('error-auth', 'Enlace inválido o caducado. Pide un nuevo enlace al receptor.');
+                document.getElementById('btn-auth').disabled = true;
+            }
+        });
+
+        // --- Helpers de UI ---
+        function showStep(id) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function showError(elId, msg) {
+            const el = document.getElementById(elId);
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideError(elId) {
+            const el = document.getElementById(elId);
+            el.style.display = 'none';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.innerHTML = '<span class="spinner"></span>Verificando...';
+                btn.disabled = true;
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        // --- PASO 1: Autenticar emisor y validar token ---
+        async function autenticar() {
+            if (!token) return;
+            hideError('error-auth');
+
+            const animal = document.getElementById('input-animal').value.trim();
+            const adjetivo = document.getElementById('input-adjetivo').value.trim();
+
+            if (!animal || !adjetivo) {
+                showError('error-auth', 'Por favor rellena Animal y Adjetivo.');
+                return;
+            }
+
+            emisorId = `${animal.toLowerCase()}_${adjetivo.toLowerCase()}`;
+            setLoading('btn-auth', true);
+
+            try {
+                const res = await fetch(
+                    `/api/transfer/validate?token=${encodeURIComponent(token)}&emisor=${encodeURIComponent(emisorId)}`
+                );
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError('error-auth', data.error || 'Error de validación.');
+                    document.getElementById('btn-auth').innerHTML = 'Continuar →';
+                    document.getElementById('btn-auth').disabled = false;
+                    return;
+                }
+
+                // Rellenar panel de info
+                maxTransferibles = data.max_transferibles;
+                document.getElementById('info-cuota').textContent = data.cuota_emisor;
+                document.getElementById('info-reservadas').textContent = data.butacas_reservadas;
+                document.getElementById('info-max').textContent = maxTransferibles;
+
+                const inputBut = document.getElementById('input-butacas');
+                inputBut.max = maxTransferibles;
+                inputBut.value = 1;
+
+                showStep('step-transfer');
+            } catch (e) {
+                showError('error-auth', 'Error de red. Comprueba tu conexión.');
+                document.getElementById('btn-auth').innerHTML = 'Continuar →';
+                document.getElementById('btn-auth').disabled = false;
+            }
+        }
+
+        // --- PASO 2: Confirmar transferencia ---
+        async function confirmarTransferencia() {
+            hideError('error-transfer');
+
+            const butacas = parseInt(document.getElementById('input-butacas').value, 10);
+
+            if (!butacas || butacas < 1) {
+                showError('error-transfer', 'Introduce un número válido de butacas.');
+                return;
+            }
+
+            if (butacas > maxTransferibles) {
+                showError('error-transfer', `No puedes transferir más de ${maxTransferibles} butaca(s).`);
+                return;
+            }
+
+            setLoading('btn-confirm', true);
+
+            try {
+                const res = await fetch('/api/transfer/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, emisor: emisorId, butacas }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError('error-transfer', data.error || 'Error al confirmar la transferencia.');
+                    document.getElementById('btn-confirm').innerHTML = '✅ Confirmar transferencia';
+                    document.getElementById('btn-confirm').disabled = false;
+                    return;
+                }
+
+                // Éxito
+                document.getElementById('success-text').textContent =
+                    `✅ Has transferido ${data.butacas_transferidas} butaca(s)`;
+                document.getElementById('success-sub').textContent =
+                    `Tu cuota restante: ${data.nueva_cuota_emisor} butaca(s)`;
+                showStep('step-success');
+            } catch (e) {
+                showError('error-transfer', 'Error de red. Comprueba tu conexión.');
+                document.getElementById('btn-confirm').innerHTML = '✅ Confirmar transferencia';
+                document.getElementById('btn-confirm').disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

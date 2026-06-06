@@ -8,8 +8,8 @@ from contextlib import asynccontextmanager
 from random import shuffle
 
 import aiosqlite
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse
 from uvicorn.protocols.utils import ClientDisconnected
 
 import bootstrap_db
@@ -345,9 +345,220 @@ async def get_index():
     return FileResponse("index.html")
 
 
+@app.get("/transferencia")
+async def get_transfer_page():
+    return FileResponse("transfer.html")
+
+
 @app.get("/api/config")
 async def get_config():
     return {"animals": identity.ANIMALS, "adjectives": identity.ADJECTIVES}
+
+
+@app.get("/api/mi-hash")
+async def get_mi_hash(id: str = ""):
+    """Devuelve el hash_transferencia del usuario autenticado.
+    El frontend lo usa para construir el enlace de WhatsApp.
+    """
+    from identity import normalize_combination
+
+    normalized = normalize_combination(id)
+    if normalized not in state.VALID_COMBINATIONS:
+        return JSONResponse({"error": "Identidad no válida"}, status_code=404)
+    hash_t = state.USER_TRANSFER_HASHES.get(normalized)
+    if not hash_t:
+        return JSONResponse({"error": "Hash no disponible"}, status_code=404)
+    return {"hash": hash_t}
+
+
+@app.get("/api/transfer/validate")
+async def transfer_validate(token: str = "", emisor: str = ""):
+    """Valida un token de transferencia y devuelve cuántas butacas puede transferir el emisor.
+
+    - token: hash_transferencia del receptor (quien pide la cuota).
+    - emisor: client_id (animal_adjetivo) del emisor (quien tiene la cuota).
+
+    Reglas:
+    - El token debe existir en HASH_TO_USER.
+    - El emisor debe ser una combinación válida.
+    - Emisor != Receptor.
+    - max_transferibles = cuota_emisor - total_butacas_reservadas_emisor.
+    """
+    from identity import normalize_combination
+
+    if not token:
+        return JSONResponse({"error": "token requerido"}, status_code=400)
+
+    receptor_id = state.HASH_TO_USER.get(token)
+    if not receptor_id:
+        return JSONResponse(
+            {"error": "Enlace de transferencia no válido"}, status_code=404
+        )
+
+    normalized_emisor = normalize_combination(emisor)
+    if normalized_emisor not in state.VALID_COMBINATIONS:
+        return JSONResponse(
+            {"error": "Identidad del emisor no válida"}, status_code=404
+        )
+
+    if normalized_emisor == receptor_id:
+        return JSONResponse(
+            {"error": "No puedes transferirte cuota a ti mismo"},
+            status_code=422,
+        )
+
+    cuota_emisor = state.USER_QUOTAS.get(normalized_emisor, 0)
+
+    # Contar butacas ya reservadas por el emisor (en todas las sesiones)
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        async with db.execute(
+            "SELECT COUNT(*) FROM seats WHERE owner_id = ? AND status = 'reserved'",
+            (normalized_emisor,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            butacas_reservadas = row[0] if row else 0
+
+    max_transferibles = cuota_emisor - butacas_reservadas
+    if max_transferibles <= 0:
+        return JSONResponse(
+            {
+                "error": "No tienes butacas disponibles para transferir",
+                "cuota": cuota_emisor,
+                "reservadas": butacas_reservadas,
+            },
+            status_code=422,
+        )
+
+    return {
+        "ok": True,
+        "emisor": normalized_emisor,
+        "receptor_confirmado": True,
+        "cuota_emisor": cuota_emisor,
+        "butacas_reservadas": butacas_reservadas,
+        "max_transferibles": max_transferibles,
+    }
+
+
+@app.post("/api/transfer/confirm")
+async def transfer_confirm(request: Request):
+    """Ejecuta la transferencia de cuota de emisor a receptor.
+
+    Body JSON:
+    {
+        "token": "<hash_transferencia del receptor>",
+        "emisor": "<animal_adjetivo del emisor>",
+        "butacas": <int>
+    }
+    """
+    from identity import normalize_combination
+
+    body = await request.json()
+    token = body.get("token", "")
+    emisor_raw = body.get("emisor", "")
+    butacas = body.get("butacas", 0)
+
+    if not token:
+        return JSONResponse({"error": "token requerido"}, status_code=400)
+
+    receptor_id = state.HASH_TO_USER.get(token)
+    if not receptor_id:
+        return JSONResponse(
+            {"error": "Enlace de transferencia no válido"}, status_code=404
+        )
+
+    normalized_emisor = normalize_combination(emisor_raw)
+    if normalized_emisor not in state.VALID_COMBINATIONS:
+        return JSONResponse(
+            {"error": "Identidad del emisor no válida"}, status_code=404
+        )
+
+    if normalized_emisor == receptor_id:
+        return JSONResponse(
+            {"error": "No puedes transferirte cuota a ti mismo"},
+            status_code=422,
+        )
+
+    if not isinstance(butacas, int) or butacas <= 0:
+        return JSONResponse({"error": "Número de butacas inválido"}, status_code=422)
+
+    cuota_emisor = state.USER_QUOTAS.get(normalized_emisor, 0)
+
+    # Contar butacas reservadas del emisor para calcular máximo transferible
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        async with db.execute(
+            "SELECT COUNT(*) FROM seats WHERE owner_id = ? AND status = 'reserved'",
+            (normalized_emisor,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            butacas_reservadas = row[0] if row else 0
+
+    max_transferibles = cuota_emisor - butacas_reservadas
+    if butacas > max_transferibles:
+        return JSONResponse(
+            {
+                "error": f"Solo puedes transferir hasta {max_transferibles} butaca(s)",
+                "max_transferibles": max_transferibles,
+            },
+            status_code=422,
+        )
+
+    nueva_cuota_emisor = cuota_emisor - butacas
+    cuota_receptor = state.USER_QUOTAS.get(receptor_id, 0)
+    nueva_cuota_receptor = cuota_receptor + butacas
+
+    # Actualizar BD de forma atómica
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        await db.execute(
+            "UPDATE user_quotas SET quota = ? WHERE user_id = ?",
+            (nueva_cuota_emisor, normalized_emisor),
+        )
+        await db.execute(
+            "UPDATE user_quotas SET quota = ? WHERE user_id = ?",
+            (nueva_cuota_receptor, receptor_id),
+        )
+        await db.commit()
+
+    # Actualizar espejo en memoria
+    state.USER_QUOTAS[normalized_emisor] = nueva_cuota_emisor
+    state.USER_QUOTAS[receptor_id] = nueva_cuota_receptor
+
+    logger.info(
+        "Transferencia: %s -> %s, %d butaca(s). Cuotas: %d -> %d / %d -> %d",
+        normalized_emisor,
+        receptor_id,
+        butacas,
+        cuota_emisor,
+        nueva_cuota_emisor,
+        cuota_receptor,
+        nueva_cuota_receptor,
+    )
+
+    # Notificar al receptor si está conectado por WebSocket
+    if receptor_id in state.active_connections:
+        try:
+            await state.active_connections[receptor_id].send_text(
+                json.dumps(
+                    {
+                        "type": "status",
+                        "status": "active"
+                        if receptor_id in state.active_users
+                        else "queued",
+                        "quota": nueva_cuota_receptor,
+                        "message": f"¡Has recibido {butacas} butaca(s) adicional(es)!",
+                    }
+                )
+            )
+        except Exception:
+            pass
+
+    return {
+        "ok": True,
+        "emisor": normalized_emisor,
+        "receptor": receptor_id,
+        "butacas_transferidas": butacas,
+        "nueva_cuota_emisor": nueva_cuota_emisor,
+        "nueva_cuota_receptor": nueva_cuota_receptor,
+    }
 
 
 def get_client_ip(websocket: WebSocket) -> str:

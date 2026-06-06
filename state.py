@@ -40,3 +40,9 @@ FILAS = 12
 # Cuotas/derechos por usuario: espejo en memoria de la tabla user_quotas.
 # La suma total debe ser siempre ASIENTOS_POR_FILA * FILAS * 3 + 3*3 = 729
 USER_QUOTAS: dict[str, int] = {}
+
+# Transferencia de cuotas: hashes seguros por usuario.
+# USER_TRANSFER_HASHES: client_id → hash_transferencia (para compartir por WhatsApp)
+# HASH_TO_USER: hash_transferencia → client_id (lookup inverso O(1))
+USER_TRANSFER_HASHES: dict[str, str] = {}
+HASH_TO_USER: dict[str, str] = {}

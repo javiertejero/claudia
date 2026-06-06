@@ -386,6 +386,13 @@
     <div id="app-screen">
         <h2>Espectáculo de Danza</h2>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
+        <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
+            <button id="btn-solicitar-transferencia" class="btn-secondary"
+                onclick="solicitarTransferencia()"
+                style="background: #f0fdf4; color: #166534; border-color: #86efac;">
+                🔗 Solicitar transferencia de cuota
+            </button>
+        </div>
 
         <div id="sessions-container" style="display: none;"></div>
     </div>
@@ -665,6 +672,7 @@
                         alertarPosicionCola(pos);
                         container.style.display = "none";
                         document.getElementById("seat-counter").style.display = "none"; // Ocultar contador de butacas reservadas cuando estás en cola
+                        document.getElementById("transfer-request-container").style.display = "block";
                     } else if (data.status === "active") {
                         // Guardar cuota del usuario
                         if (data.quota !== undefined) {
@@ -686,6 +694,7 @@
                             document.getElementById("sessions-container").style.display = "block";
                             document.getElementById("seat-counter").style.display = "block";
                         }
+                        document.getElementById("transfer-request-container").style.display = "block";
 
                         // Alerta de acceso: campanada triple + voz + flash verde
                         flashPantalla(true);
@@ -1110,6 +1119,26 @@
             // Genera un enlace a WhatsApp con el texto pre-rellenado (URL encodeado)
             const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoReservasFormateado)}`;
             window.open(url, '_blank');
+        }
+
+        async function solicitarTransferencia() {
+            if (!clientId) {
+                alert('Debes iniciar sesión primero.');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/mi-hash?id=${encodeURIComponent(clientId)}`);
+                const data = await res.json();
+                if (!res.ok || !data.hash) {
+                    alert('No se pudo obtener tu enlace de transferencia. Intenta de nuevo.');
+                    return;
+                }
+                const enlace = `https://claudia.fly.dev/transferencia?token=${encodeURIComponent(data.hash)}`;
+                const mensaje = `Te paso un enlace para que me transfieras butacas a mi usuario, gracias\n${enlace}`;
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank');
+            } catch (e) {
+                alert('Error al generar el enlace de transferencia.');
+            }
         }
 
         function iniciarTemporizador(segundos) {
