@@ -160,6 +160,16 @@
             background: #d97706;
         }
 
+        .escenario-wrapper {
+            /* On mobile: stick to the left edge of the scroll viewport so the
+               escenario always appears centred on-screen even when scrolled. */
+            position: sticky;
+            left: 0;
+            /* Take the full visible width of the scroll container */
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
         .escenario {
             max-width: 400px;
             margin: 0 auto;
@@ -725,11 +735,14 @@
                 title.innerText = `Sesión ${sesion}`;
                 block.appendChild(title);
 
+                const escenarioWrapper = document.createElement("div");
+                escenarioWrapper.className = "escenario-wrapper";
+
                 const escenario = document.createElement("div");
                 escenario.className = "escenario";
                 escenario.innerText = "ESCENARIO";
-                escenario.style.marginBottom = "20px";
-                block.appendChild(escenario);
+                escenarioWrapper.appendChild(escenario);
+                block.appendChild(escenarioWrapper);
 
                 // Grid 1: Estándar (Filas 1 a 11)
                 const grid = document.createElement("div");
