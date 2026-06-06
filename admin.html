@@ -225,6 +225,43 @@
         }
         #overbooking-banner .ob-icon { font-size: 1.3rem; flex-shrink: 0; }
         #overbooking-banner .ob-detail { font-weight: normal; font-size: 0.85rem; color: #b91c1c; }
+
+        /* Botón WhatsApp en combo-item */
+        .btn-whatsapp {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #25d366;
+            color: white;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-size: 0.9rem;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s, transform 0.1s;
+            text-decoration: none;
+        }
+        .btn-whatsapp:hover { background: #128c52; transform: scale(1.1); }
+
+        /* Enlace a la app principal en el header */
+        .app-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #475569;
+            text-decoration: none;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 5px 10px;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .app-link:hover { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
     </style>
 </head>
 
@@ -303,16 +340,19 @@
                             style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">+</button>
                     </div>
                 </div>
-                <div style="margin-top: 10px; font-size: 0.95rem; color: #475569;">
-                    <span class="status-dot"></span> En vivo
+                <div style="margin-top: 10px; font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span><span class="status-dot"></span> En vivo</span>
                     <span
-                        style="margin-left: 20px; background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
+                        style="background: #eff6ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfdbfe;">
                         👥 Editando: <strong id="active-count" style="color: #2563eb;">0</strong>
                     </span>
                     <span
-                        style="margin-left: 10px; background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
+                        style="background: #fff7ed; padding: 4px 8px; border-radius: 4px; border: 1px solid #fed7aa;">
                         ⏳ En cola: <strong id="queued-count" style="color: #ea580c;">0</strong>
                     </span>
+                    <a href="https://claudia.fly.dev" target="_blank" rel="noopener" class="app-link">
+                        🌐 claudia.fly.dev
+                    </a>
                 </div>
             </div>
 
@@ -619,6 +659,30 @@
                     stepper.appendChild(btnInc);
                     el.appendChild(stepper);
                 }
+
+                // Botón WhatsApp
+                const btnWA = document.createElement('a');
+                btnWA.className = 'btn-whatsapp';
+                btnWA.title = `Enviar por WhatsApp a ${combo.replace('_', ' ')} (cuota: ${quota !== null ? quota : '?'})`;
+                btnWA.textContent = '🟢';
+                btnWA.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.132.558 4.133 1.532 5.867L0 24l6.323-1.51A11.951 11.951 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.6a9.568 9.568 0 01-4.932-1.364l-.354-.21-3.752.895.944-3.651-.23-.375A9.567 9.567 0 012.4 12c0-5.295 4.305-9.6 9.6-9.6 5.296 0 9.6 4.305 9.6 9.6 0 5.296-4.304 9.6-9.6 9.6z"/></svg>';
+                btnWA.target = '_blank';
+                btnWA.rel = 'noopener';
+                // El href se construye con la cuota del momento (puede actualizarse)
+                function buildWAHref(c, q) {
+                    const nombre = c.replace('_', ' ');
+                    const msg = `Hola! Tu identidad para la reserva es: *${nombre}*. Tu número de derechos (cuota) es: *${q !== null ? q : '?'}*. Accede aquí: https://claudia.fly.dev`;
+                    return `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                }
+                btnWA.href = buildWAHref(combo, quota);
+                btnWA.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Actualiza el href con la cuota actual antes de abrir
+                    const currentBadge = el.querySelector('.quota-badge');
+                    const currentQuota = currentBadge ? parseInt(currentBadge.dataset.quota, 10) : quota;
+                    btnWA.href = buildWAHref(combo, currentQuota);
+                });
+                el.appendChild(btnWA);
 
                 container.appendChild(el);
             });
