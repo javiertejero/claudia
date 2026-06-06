@@ -215,6 +215,56 @@ async def download_quotas(secret: str):
     )
 
 
+@admin_router.patch("/admin/{secret}/quota/{user_id}")
+async def adjust_quota(secret: str, user_id: str, request: Request):
+    """Ajusta la cuota de un usuario en +1 o -1.
+    No impone el invariante de suma 729, pero devuelve el total actual
+    para que el frontend pueda mostrar un aviso de overbooking."""
+    if secret != state.ADMIN_SECRET:
+        return JSONResponse({"error": "No autorizado"}, status_code=401)
+
+    if user_id not in state.VALID_COMBINATIONS:
+        return JSONResponse(
+            {"error": f"Usuario desconocido: '{user_id}'"}, status_code=404
+        )
+
+    body = await request.json()
+    delta = body.get("delta", 0)
+    if delta not in (1, -1):
+        return JSONResponse({"error": "delta debe ser 1 o -1"}, status_code=422)
+
+    current = state.USER_QUOTAS.get(user_id, 0)
+    new_quota = current + delta
+
+    if new_quota < 0 or new_quota > 6:
+        return JSONResponse(
+            {
+                "error": f"Cuota resultante fuera de rango: {new_quota}. Debe estar entre 0 y 6."
+            },
+            status_code=422,
+        )
+
+    # Actualizar BD
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO user_quotas (user_id, quota) VALUES (?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET quota = excluded.quota",
+            (user_id, new_quota),
+        )
+        await db.commit()
+
+    # Actualizar memoria
+    state.USER_QUOTAS[user_id] = new_quota
+    total = sum(state.USER_QUOTAS.values())
+    logger.info(
+        "Cuota de %s ajustada: %d → %d (total: %d)", user_id, current, new_quota, total
+    )
+
+    return JSONResponse(
+        {"ok": True, "user_id": user_id, "new_quota": new_quota, "total": total}
+    )
+
+
 @admin_router.post("/admin/{secret}/quotas.csv")
 async def upload_quotas(secret: str, request: Request):
     """Carga cuotas desde un CSV. Valida que la suma total == TOTAL_CUOTAS (729).

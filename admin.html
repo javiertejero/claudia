@@ -183,6 +183,48 @@
         .quota-badge.ghost  { background: #e2e8f0; color: #64748b; }
         .quota-badge.low    { background: #fef3c7; color: #92400e; }
         .quota-badge.high   { background: #dcfce7; color: #166534; }
+
+        /* Stepper +/- dentro del combo-item */
+        .quota-stepper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .quota-stepper button {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: white;
+            color: #374151;
+            font-size: 0.85rem;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.1s;
+        }
+        .quota-stepper button:hover:not(:disabled) { background: #e0e7ff; border-color: #818cf8; }
+        .quota-stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Banner de overbooking */
+        #overbooking-banner {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(90deg, #fef2f2, #fff7ed);
+            border: 1.5px solid #fca5a5;
+            border-radius: 8px;
+            padding: 12px 18px;
+            margin-bottom: 1.2rem;
+            font-size: 0.92rem;
+            color: #991b1b;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(239,68,68,0.12);
+        }
+        #overbooking-banner .ob-icon { font-size: 1.3rem; flex-shrink: 0; }
+        #overbooking-banner .ob-detail { font-weight: normal; font-size: 0.85rem; color: #b91c1c; }
     </style>
 </head>
 
@@ -278,6 +320,15 @@
         </div>
 
         <div class="stats-container" id="stats">
+        </div>
+
+        <!-- Banner de overbooking (oculto por defecto) -->
+        <div id="overbooking-banner">
+            <span class="ob-icon">⚠️</span>
+            <div>
+                <strong>Riesgo de Overbooking</strong> — la suma de cuotas supera los 729 asientos totales.
+                <br><span class="ob-detail">Total actual: <strong id="ob-total">0</strong> / 729. Ajusta las cuotas para eliminar este aviso.</span>
+            </div>
         </div>
 
         <!-- Panel de combinaciones válidas -->
@@ -528,21 +579,45 @@
 
                 const el = document.createElement('div');
                 el.className = 'combo-item';
+                el.dataset.combo = combo;
+                // Solo abrir taquilla al clicar en la etiqueta, no en los botones
                 el.title = `Abrir taquilla para: ${combo}`;
-                el.addEventListener('click', () => abrirTaquillaConCombo(combo));
 
                 const label = document.createElement('span');
                 label.textContent = combo.replace('_', ' • ');
-
+                label.style.cursor = 'pointer';
+                label.style.flex = '1';
+                label.addEventListener('click', () => abrirTaquillaConCombo(combo));
                 el.appendChild(label);
 
                 if (quota !== null) {
+                    // Stepper: − [badge] +
+                    const stepper = document.createElement('div');
+                    stepper.className = 'quota-stepper';
+
+                    const btnDec = document.createElement('button');
+                    btnDec.textContent = '−';
+                    btnDec.title = 'Reducir cuota';
+                    btnDec.disabled = quota <= 0;
+                    btnDec.addEventListener('click', (e) => { e.stopPropagation(); ajustarCuota(combo, -1, el); });
+
                     const badge = document.createElement('span');
                     badge.className = 'quota-badge ' + (
                         quota === 0 ? 'ghost' : quota <= 3 ? 'low' : 'high'
                     );
                     badge.textContent = quota === 0 ? '✕ 0' : `✦ ${quota}`;
-                    el.appendChild(badge);
+                    badge.dataset.quota = quota;
+
+                    const btnInc = document.createElement('button');
+                    btnInc.textContent = '+';
+                    btnInc.title = 'Aumentar cuota';
+                    btnInc.disabled = quota >= 6;
+                    btnInc.addEventListener('click', (e) => { e.stopPropagation(); ajustarCuota(combo, 1, el); });
+
+                    stepper.appendChild(btnDec);
+                    stepper.appendChild(badge);
+                    stepper.appendChild(btnInc);
+                    el.appendChild(stepper);
                 }
 
                 container.appendChild(el);
@@ -563,6 +638,56 @@
             // Precargamos el combo en el sessionStorage para que index.html lo recoja
             localStorage.setItem('taquilla_combo', combo);
             window.open(`/`, '_blank');
+        }
+
+        /** Ajusta la cuota de un usuario en +1 o -1 y actualiza la UI en tiempo real */
+        async function ajustarCuota(combo, delta, itemEl) {
+            const TOTAL_TARGET = 729;
+            try {
+                const res = await fetch(`/admin/${secret}/quota/${encodeURIComponent(combo)}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ delta })
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    console.warn('Error ajustando cuota:', data.error);
+                    return;
+                }
+
+                const newQuota = data.new_quota;
+                const total   = data.total;
+
+                // 1. Actualizar datos locales
+                const idx = allCombinations.findIndex(c => (typeof c === 'string' ? c : c.combo) === combo);
+                if (idx !== -1) allCombinations[idx].quota = newQuota;
+
+                // 2. Actualizar el badge y botones del item
+                const badge  = itemEl.querySelector('.quota-badge');
+                const btnDec = itemEl.querySelector('.quota-stepper button:first-child');
+                const btnInc = itemEl.querySelector('.quota-stepper button:last-child');
+
+                badge.className = 'quota-badge ' + (
+                    newQuota === 0 ? 'ghost' : newQuota <= 3 ? 'low' : 'high'
+                );
+                badge.textContent = newQuota === 0 ? '✕ 0' : `✦ ${newQuota}`;
+                badge.dataset.quota = newQuota;
+                btnDec.disabled = newQuota <= 0;
+                btnInc.disabled = newQuota >= 6;
+
+                // 3. Banner de overbooking
+                const banner  = document.getElementById('overbooking-banner');
+                const obTotal = document.getElementById('ob-total');
+                if (total > TOTAL_TARGET) {
+                    obTotal.textContent = total;
+                    banner.style.display = 'flex';
+                } else {
+                    banner.style.display = 'none';
+                }
+
+            } catch (e) {
+                console.error('Error de red al ajustar cuota:', e);
+            }
         }
 
         async function descargarCuotas() {
