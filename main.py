@@ -219,7 +219,11 @@ async def expire_user_session(client_id: str):
 
 
 async def sync_queue_to_db():
-    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
+    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite.
+
+    Preserves each client's existing last_seen so that a queue reshuffle
+    (e.g. cleanup or shuffle) does not unfairly reset disconnection timers.
+    """
     if state.IS_SHUTTING_DOWN:
         logger.warning(
             "[SYNC_QUEUE] Aplicación apagándose, no se sincroniza la cola a la BD."
@@ -228,11 +232,16 @@ async def sync_queue_to_db():
     now = time.time()
     async with state.queue_lock:
         async with aiosqlite.connect(state.DB_FILE) as db:
+            # 1. Backup existing last_seen values before wiping the table
+            async with db.execute("SELECT client_id, last_seen FROM queue") as cursor:
+                existing = {row[0]: row[1] for row in await cursor.fetchall()}
+
             await db.execute("DELETE FROM queue")
             await db.executemany(
                 "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
                 [
-                    (client_id, i, now)
+                    # Preserve original last_seen; fall back to now only for brand-new entries
+                    (client_id, i, existing.get(client_id, now))
                     for i, client_id in enumerate(state.waiting_queue)
                 ],
             )
@@ -246,11 +255,19 @@ async def process_queue():
                 break
             next_client = state.waiting_queue.pop(0)
             async with aiosqlite.connect(state.DB_FILE) as db:
+                # Backup existing last_seen values before wiping the table
+                async with db.execute(
+                    "SELECT client_id, last_seen FROM queue"
+                ) as cursor:
+                    existing = {row[0]: row[1] for row in await cursor.fetchall()}
+
+                now = time.time()
                 await db.execute("DELETE FROM queue")
                 await db.executemany(
                     "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
                     [
-                        (client_id, i, time.time())
+                        # Preserve original last_seen; fall back to now only for brand-new entries
+                        (client_id, i, existing.get(client_id, now))
                         for i, client_id in enumerate(state.waiting_queue)
                     ],
                 )

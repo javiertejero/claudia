@@ -214,10 +214,74 @@
             /* Ejecuta la animación en 0.6 segundos */
             animation: giro-limite 0.6s ease-in-out;
         }
+
+        /* =============================================
+           Banner de desconexion
+        ============================================= */
+        #disconnect-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 40%, #ef4444 100%);
+            color: #7f1d1d;
+            padding: 14px 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.45);
+            font-weight: 700;
+            font-size: 0.97rem;
+            letter-spacing: 0.2px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to   { transform: translateY(0);     opacity: 1; }
+        }
+
+        #disconnect-banner .disconnect-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        #disconnect-banner .disconnect-msg {
+            flex: 1;
+            text-align: left;
+        }
+
+        #btn-reconnect {
+            background: #7f1d1d;
+            color: #fef9c3;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            transition: background 0.15s ease, transform 0.1s ease;
+            flex-shrink: 0;
+        }
+
+        #btn-reconnect:hover {
+            background: #991b1b;
+            transform: scale(1.04);
+        }
     </style>
 </head>
 
 <body>
+    <!-- Disconnect banner (hidden by default) -->
+    <div id="disconnect-banner" role="alert" aria-live="assertive">
+        <span class="disconnect-icon">⚠️</span>
+        <span class="disconnect-msg">Se ha perdido la conexión con el servidor. Tu posición en cola está guardada.</span>
+        <button id="btn-reconnect" onclick="window.location.reload()">&#128260; Reconectar</button>
+    </div>
     <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
         onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
     <div id="login-screen">
@@ -554,6 +618,13 @@
 
                     if (ws) ws.close(); // Cerramos la conexión desde el cliente por si acaso
                 }
+            };
+
+            ws.onclose = function () {
+                // Do not show the banner if the user intentionally finished or timed out
+                if (finalizado || tiempoAgotadoFlag) return;
+                const banner = document.getElementById('disconnect-banner');
+                if (banner) banner.style.display = 'flex';
             };
         }
 
