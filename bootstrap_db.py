@@ -26,7 +26,8 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS queue (
                 client_id TEXT PRIMARY KEY,
-                position INTEGER
+                position INTEGER,
+                last_seen REAL
             )
         """)
         await db.execute("""

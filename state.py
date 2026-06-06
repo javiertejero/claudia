@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 IS_SHUTTING_DOWN = False
 IS_STARTING = True
+DISCONNECTION_TIMEOUT_SECONDS = 30
 
 # For k6 stress testing (e.g. RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True uv run --frozen --env-file .env fastapi run main.py )
 DISABLE_IDENTITY_CHECKS = os.getenv("DISABLE_IDENTITY_CHECKS", "False") != "False"
@@ -14,7 +15,7 @@ RATE_LIMIT = os.getenv("RATE_LIMIT", "True") != "False"
 
 DB_FILE = "data/reservas.db"
 MAX_ACTIVE_USERS = 0
-SESSION_TIMEOUT = 300  # segundos para expiración de sesión de usuario
+SESSION_TIMEOUT = 180  # segundos para expiración de sesión de usuario
 active_user_tasks = {}  # Para guardar el cronómetro de cada usuario
 active_user_expires = {}  # Guarda el timestamp absoluto en el que expira
 

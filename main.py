@@ -24,17 +24,41 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Helper: touch last_seen for a client in the DB queue row
+# ---------------------------------------------------------------------------
+
+
+async def update_last_seen(client_id: str):
+    """Updates the last_seen timestamp for client_id in the queue table."""
+    now = time.time()
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        await db.execute(
+            "UPDATE queue SET last_seen = ? WHERE client_id = ?",
+            (now, client_id),
+        )
+        await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Cleanup
+# ---------------------------------------------------------------------------
+
+
 async def cleanup_waiting_queue():
-    """Elimina de la waiting_queue a clientes que no tienen conexión activa."""
+    """Centralized cleanup: removes stale clients from waiting_queue, active_users
+    and active_connections based on their last_seen value in the DB.
+    A client_id is considered stale when:
+        time.time() - last_seen > DISCONNECTION_TIMEOUT_SECONDS
+    """
     while True:
-        await asyncio.sleep(10)  # Ejecutar cada x segundos
+        await asyncio.sleep(10)  # run every 10 seconds
         if state.IS_SHUTTING_DOWN:
             logger.info("[CLEANUP] Aplicación apagándose, saliendo del cleanup.")
             return
 
         if state.MAX_ACTIVE_USERS == 0:
-            # Significa que no se ha abierto el "par de timbales", por tanto la cola debe estar vacía.
-            # Si hay alguien en cola, lo echamos inmediatamente.
+            # El par de timbales no ha abierto; la cola debería estar vacía.
             if state.waiting_queue:
                 logger.warning(
                     "[CLEANUP] MAX_ACTIVE_USERS es 0 pero hay %d clientes en cola. Randomizando asignaciones de asientos.",
@@ -43,65 +67,86 @@ async def cleanup_waiting_queue():
                 shuffle(state.waiting_queue)
                 await sync_queue_to_db()
 
-        # ============================================
-        # 1) LIMPIEZA DE CLIENTES DESCONECTADOS
-        # ============================================
-        # Crear una nueva lista solo con los clientes que sí tienen conexión activa.
-        # Esto elimina eficazmente a los clientes "basura" de la cola.
-        cleaned_queue = [
-            client_id
-            for client_id in state.waiting_queue
-            if client_id in state.active_connections
-        ]
-        if len(cleaned_queue) < len(state.waiting_queue):
+        # ---------------------------------------------------------------
+        # 1) Fetch last_seen values for all queued clients from the DB
+        # ---------------------------------------------------------------
+        now = time.time()
+        timeout = state.DISCONNECTION_TIMEOUT_SECONDS
+
+        async with aiosqlite.connect(state.DB_FILE) as db:
+            async with db.execute("SELECT client_id, last_seen FROM queue") as cursor:
+                rows = await cursor.fetchall()
+
+        # Build a dict for quick lookup; clients with NULL last_seen are treated as seen "now"
+        last_seen_map = {
+            row[0]: (row[1] if row[1] is not None else now) for row in rows
+        }
+
+        def is_stale(client_id: str) -> bool:
+            ls = last_seen_map.get(client_id, now)
+            return (now - ls) > timeout
+
+        # ---------------------------------------------------------------
+        # 2) Clean waiting_queue
+        # ---------------------------------------------------------------
+        stale_in_queue = [cid for cid in state.waiting_queue if is_stale(cid)]
+        if stale_in_queue:
             logger.info(
-                "[CLEANUP] Eliminados %d clientes inactivos de la cola.",
-                len(state.waiting_queue) - len(cleaned_queue),
+                "[CLEANUP] Eliminando %d clientes inactivos de la cola: %s",
+                len(stale_in_queue),
+                stale_in_queue,
             )
-            state.waiting_queue[:] = cleaned_queue  # Actualiza la cola en memoria
-            await sync_queue_to_db()  # Sincroniza la cola limpia con la base de datos
+            for cid in stale_in_queue:
+                state.waiting_queue.remove(cid)
+            await sync_queue_to_db()
         else:
             logger.info("No hay clientes desconectados, queue: %s", state.waiting_queue)
 
-        # Limpiar de active_users a clientes que ya no tienen conexión activa (evita que se queden bloqueados slots activos)
-        cleaned_active_users = {
-            client_id
-            for client_id in state.active_users
-            if client_id in state.active_connections
-        }
+        # ---------------------------------------------------------------
+        # 3) Clean active_users (also check active_connections stale peers)
+        # ---------------------------------------------------------------
+        # Collect all client_ids that appear in active_users OR active_connections
+        # so we can clean up stale entries from both structures.
+        all_tracked = state.active_users | set(state.active_connections.keys())
+        stale_active = {cid for cid in all_tracked if is_stale(cid)}
+
         logger.info(
-            "Stats: %d cleaned_active_users, %d active_users, %d active_connections, %d waiting_queue",
-            len(cleaned_active_users),
+            "Stats: %d active_users, %d active_connections, %d waiting_queue",
             len(state.active_users),
             len(state.active_connections),
             len(state.waiting_queue),
         )
-        if len(cleaned_active_users) < len(state.active_users):
+
+        if stale_active:
             logger.info(
-                "[CLEANUP] Eliminados %d usuarios activos inactivos.",
-                len(state.active_users) - len(cleaned_active_users),
+                "[CLEANUP] Eliminando %d clientes inactivos de active_users/connections: %s",
+                len(stale_active),
+                stale_active,
             )
-            # Liberar las reservas en estado "reserving" de estos usuarios inactivos
-            for client_id in state.active_users - cleaned_active_users:
+            for client_id in stale_active:
+                # Release any in-progress seat reservations
                 try:
                     await seats.release_reserving_seats(client_id)
-                    if client_id in state.active_user_tasks:
-                        state.active_user_tasks[client_id].cancel()
-                        del state.active_user_tasks[client_id]
                 except Exception as e:
                     logger.error(
                         "Error limpiando reservas de usuario inactivo %s: %s",
                         client_id,
                         e,
                     )
+                # Cancel session-expiry task
+                if client_id in state.active_user_tasks:
+                    state.active_user_tasks[client_id].cancel()
+                    del state.active_user_tasks[client_id]
+                # Remove from all state structures
+                state.active_users.discard(client_id)
+                state.active_connections.pop(client_id, None)
+                state.active_users_names.pop(client_id, None)
 
-            state.active_users.clear()
-            state.active_users.update(cleaned_active_users)
             await broadcast.broadcast_seats()
 
         await process_queue()
 
-        # Enviamos las posiciones actualizadas de la cola a todos
+        # Broadcast updated queue positions and admin stats
         await broadcast.broadcast_queue_positions()
         await broadcast.broadcast_admin_stats()
 
@@ -135,7 +180,6 @@ async def lifespan(app: FastAPI):
     finally:
         # Cancelar la tarea de limpieza cuando la aplicación se detiene
         cleanup_task.cancel()
-        # Catch the CancelledError gracefully
         try:
             await cleanup_task
         except asyncio.CancelledError:
@@ -181,12 +225,16 @@ async def sync_queue_to_db():
             "[SYNC_QUEUE] Aplicación apagándose, no se sincroniza la cola a la BD."
         )
         return
+    now = time.time()
     async with state.queue_lock:
         async with aiosqlite.connect(state.DB_FILE) as db:
             await db.execute("DELETE FROM queue")
             await db.executemany(
-                "INSERT INTO queue (client_id, position) VALUES (?, ?)",
-                [(client_id, i) for i, client_id in enumerate(state.waiting_queue)],
+                "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
+                [
+                    (client_id, i, now)
+                    for i, client_id in enumerate(state.waiting_queue)
+                ],
             )
             await db.commit()
 
@@ -200,8 +248,11 @@ async def process_queue():
             async with aiosqlite.connect(state.DB_FILE) as db:
                 await db.execute("DELETE FROM queue")
                 await db.executemany(
-                    "INSERT INTO queue (client_id, position) VALUES (?, ?)",
-                    [(client_id, i) for i, client_id in enumerate(state.waiting_queue)],
+                    "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
+                    [
+                        (client_id, i, time.time())
+                        for i, client_id in enumerate(state.waiting_queue)
+                    ],
                 )
                 await db.commit()
 
@@ -345,9 +396,10 @@ async def websocket_endpoint(
     else:
         state.active_users_names[client_id] = nombre_limpio
 
-    # 2. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
+    # 4. GESTIÓN JUSTA DE RECONEXIONES Y HERENCIA DE TIEMPO
     if client_id in state.active_users:
-        # Si ya estaba activo, hereda el tiempo restante
+        # Si ya estaba activo, hereda el tiempo restante; actualizamos last_seen
+        await update_last_seen(client_id)
         remaining = int(
             state.active_user_expires.get(
                 client_id, time.time() + state.SESSION_TIMEOUT
@@ -367,7 +419,8 @@ async def websocket_endpoint(
         )
 
     elif client_id in state.waiting_queue:
-        # Si ya estaba en la cola, le devolvemos su posición
+        # Si ya estaba en la cola, actualizamos last_seen y devolvemos su posición
+        await update_last_seen(client_id)
         pos = state.waiting_queue.index(client_id) + 1
         await websocket.send_text(
             json.dumps({"type": "status", "status": "queued", "position": pos})
@@ -402,14 +455,12 @@ async def websocket_endpoint(
         else:
             async with state.queue_lock:
                 state.waiting_queue.append(client_id)
+                now = time.time()
                 async with aiosqlite.connect(state.DB_FILE) as db:
                     await db.execute("DELETE FROM queue")
                     await db.executemany(
-                        "INSERT INTO queue (client_id, position) VALUES (?, ?)",
-                        [
-                            (client_id, i)
-                            for i, client_id in enumerate(state.waiting_queue)
-                        ],
+                        "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
+                        [(cid, i, now) for i, cid in enumerate(state.waiting_queue)],
                     )
                     await db.commit()
             pos = len(state.waiting_queue)
@@ -422,6 +473,8 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_text()
+            # Touch last_seen on every message received
+            await update_last_seen(client_id)
 
             try:
                 payload = json.loads(data)
@@ -441,6 +494,8 @@ async def websocket_endpoint(
                 await seats.reserve_seats(client_id)
                 await websocket.close()
                 state.active_users.discard(client_id)
+                state.active_connections.pop(client_id, None)
+                state.active_users_names.pop(client_id, None)
                 await process_queue()
                 await broadcast.broadcast_seats()
                 break
@@ -473,40 +528,24 @@ async def websocket_endpoint(
                             }
                         )
                     )
-
+                # Touch last_seen after sending a response
+                await update_last_seen(client_id)
                 await broadcast.broadcast_seats()
 
     except (WebSocketDisconnect, RuntimeError, ClientDisconnected) as exc:
-        # Protect your disconnect logic!
+        # On disconnect we do NOT remove the client from waiting_queue, active_users,
+        # or active_connections immediately. The cleanup_waiting_queue background task
+        # will evict stale clients once DISCONNECTION_TIMEOUT_SECONDS has elapsed.
         if state.IS_SHUTTING_DOWN:
             logger.warning("Server is shutting down. Skipping normal disconnect logic.")
-            # Let it die peacefully without triggering your DB updates/alerts
             return
-        logger.error("Error while processing websocket_endpoint %s", exc)
+        logger.info(
+            "[DISCONNECT] Client %s disconnected (%s). Keeping in state until timeout.",
+            client_id,
+            exc,
+        )
+        # Only clear the active WebSocket reference if it still points to this socket
         if state.active_connections.get(client_id) == websocket:
-            # Si se cierra sin finalizar, liberamos las que estaban en 'reserving'
-            await seats.release_reserving_seats(client_id)
-
             state.active_connections.pop(client_id, None)
-            state.active_users.discard(client_id)
-            async with state.queue_lock:
-                if client_id in state.waiting_queue:
-                    state.waiting_queue.remove(client_id)
-                    async with aiosqlite.connect(state.DB_FILE) as db:
-                        await db.execute("DELETE FROM queue")
-                        await db.executemany(
-                            "INSERT INTO queue (client_id, position) VALUES (?, ?)",
-                            [
-                                (client_id, i)
-                                for i, client_id in enumerate(state.waiting_queue)
-                            ],
-                        )
-                        await db.commit()
-            await broadcast.broadcast_seats()
-            if client_id in state.active_user_tasks:
-                state.active_user_tasks[client_id].cancel()
-                del state.active_user_tasks[client_id]
 
-            await process_queue()
-            await broadcast.broadcast_queue_positions()
-            await broadcast.broadcast_admin_stats()
+        await broadcast.broadcast_admin_stats()
