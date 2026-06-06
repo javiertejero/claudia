@@ -145,19 +145,19 @@
         }
 
         .reserved {
-            background: #ef4444;
-            color: white;
+            background: #334155;
+            color: #94a3b8;
             cursor: not-allowed;
         }
 
         .my-seat {
-            background: #22c55e;
-            color: white;
+            background: #f59e0b;
+            color: #1c1917;
         }
 
-        /* Verde para tus butacas */
+        /* Ámbar para tus butacas — visible para daltónicos */
         .my-seat:hover {
-            background: #16a34a;
+            background: #d97706;
         }
 
         .escenario {
@@ -698,10 +698,10 @@
             document.getElementById("seat-count").innerText = mySeatsCount;
 
             if (mySeatsCount >= 6) {
-                counterDiv.style.background = "#ef4444";
+                counterDiv.style.background = "#b45309";
                 warningMax.style.display = "block";
             } else if (mySeatsCount > 0) {
-                counterDiv.style.background = "#22c55e";
+                counterDiv.style.background = "#d97706";
                 warningMax.style.display = "none";
             } else {
                 counterDiv.style.background = "#1e293b";
@@ -791,10 +791,15 @@
 
                     if (seat.status === "free") {
                         btn.className = "seat free";
+                        btn.setAttribute("aria-label", `Butaca ${theatreSeatNum} libre`);
                     } else if (seat.is_mine) {
                         btn.className = "seat my-seat";
+                        btn.setAttribute("aria-label", `Butaca ${theatreSeatNum} reservada por ti`);
+                        btn.innerHTML = `<span aria-hidden="true" style="display:block;font-size:0.6rem;line-height:1">✓</span>${theatreSeatNum}`;
                     } else {
                         btn.className = "seat reserved";
+                        btn.setAttribute("aria-label", `Butaca ${theatreSeatNum} ocupada`);
+                        btn.innerHTML = `<span aria-hidden="true" style="display:block;font-size:0.6rem;line-height:1">✕</span>${theatreSeatNum}`;
                     }
 
                     btn.onclick = () => {
