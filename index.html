@@ -510,6 +510,115 @@
             background: #991b1b;
             transform: scale(1.04);
         }
+
+        /* Ajustes responsivos para el contador flotante de butacas */
+        @media (max-width: 768px) {
+            #seat-counter {
+                top: auto !important;
+                bottom: 16px !important;
+                left: 16px !important;
+                right: 16px !important;
+                padding: 12px 16px !important;
+                border-radius: 16px !important;
+                box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4) !important;
+            }
+
+            /* Botones de acción lado a lado en móvil vertical */
+            #seat-counter #action-buttons {
+                flex-direction: row !important;
+            }
+
+            #seat-counter #action-buttons button {
+                flex: 1 !important;
+                padding: 8px !important;
+                font-size: 0.85rem !important;
+            }
+
+            #seat-counter #finish-button button {
+                width: 100% !important;
+                padding: 10px !important;
+                font-size: 0.95rem !important;
+            }
+
+            #seat-counter #finish-button hr {
+                margin: 4px 0 !important;
+            }
+
+            /* Espacio de seguridad al final para que el counter no tape las butacas */
+            #sessions-container {
+                padding-bottom: 180px !important;
+            }
+        }
+
+        /* Modo apaisado / horizontal en móviles (poca altura de pantalla) */
+        @media (max-height: 500px) and (max-width: 900px) {
+            #seat-counter {
+                top: auto !important;
+                bottom: 10px !important;
+                left: 10px !important;
+                right: 10px !important;
+                padding: 8px 16px !important;
+                border-radius: 12px !important;
+                display: flex !important; /* Forzamos flexbox si está visible */
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 12px !important;
+                box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4) !important;
+            }
+
+            /* Respetamos cuando Javascript oculte el panel mediante display: none */
+            #seat-counter[style*="display: none"] {
+                display: none !important;
+            }
+
+            /* Ocultamos el separador hr para ahorrar altura */
+            #seat-counter #finish-button hr {
+                display: none !important;
+            }
+
+            /* Ajuste de textos en una sola línea */
+            #seat-counter > div:first-child {
+                margin-bottom: 0 !important;
+                white-space: nowrap !important;
+                font-size: 0.9rem !important;
+            }
+
+            #warning-maximo {
+                margin-bottom: 0 !important;
+                font-size: 0.7rem !important;
+                padding: 2px 6px !important;
+                white-space: nowrap !important;
+            }
+
+            /* Botones de acción horizontales y más compactos */
+            #seat-counter #action-buttons {
+                flex-direction: row !important;
+                margin-bottom: 0 !important;
+                gap: 6px !important;
+            }
+
+            #seat-counter #action-buttons button {
+                padding: 6px 10px !important;
+                font-size: 0.8rem !important;
+                white-space: nowrap !important;
+            }
+
+            #seat-counter #finish-button {
+                margin: 0 !important;
+            }
+
+            #seat-counter #finish-button button {
+                padding: 6px 12px !important;
+                font-size: 0.85rem !important;
+                white-space: nowrap !important;
+            }
+
+            /* Menor padding inferior necesario en modo apaisado */
+            #sessions-container {
+                padding-bottom: 90px !important;
+            }
+        }
     </style>
 </head>
 
