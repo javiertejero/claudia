@@ -301,7 +301,65 @@
             color: #1d4ed8;
             border-color: #93c5fd;
         }
+
+        /* Estilos premium para las etiquetas de usuarios activos/en cola */
+        .user-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            background: white;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .user-tag.active-user {
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+
+        .user-tag.active-user:hover {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+
+        .user-tag.queued-user {
+            color: #c2410c;
+            border-color: #fed7aa;
+        }
+
+        .user-tag.queued-user:hover {
+            background: #ffedd5;
+            border-color: #f97316;
+        }
+
+        .user-tag .tag-icon {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .user-tag .taq-badge {
+            font-size: 0.65rem;
+            background: #d97706;
+            color: white;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
     </style>
+
 </head>
 
 <body>
@@ -393,7 +451,18 @@
                         🌐 claudia.fly.dev
                     </a>
                 </div>
+                <div id="users-details-panel" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div id="active-users-detail" style="display: none; align-items: center; gap: 8px; font-size: 0.85rem; flex-wrap: wrap; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+                        <span style="font-weight: 600; color: #334155; display: flex; align-items: center; gap: 4px; white-space: nowrap;">👥 Editando ahora:</span>
+                        <div id="active-users-tags" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+                    </div>
+                    <div id="queued-users-detail" style="display: none; align-items: center; gap: 8px; font-size: 0.85rem; flex-wrap: wrap; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+                        <span style="font-weight: 600; color: #334155; display: flex; align-items: center; gap: 4px; white-space: nowrap;">⏳ En cola:</span>
+                        <div id="queued-users-tags" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
+                    </div>
+                </div>
             </div>
+
 
 
         </div>
@@ -523,7 +592,12 @@
                     if (data.max_active_users !== undefined) {
                         document.getElementById("max-users-value").innerText = data.max_active_users;
                     }
+
+                    // Actualizar listas de usuarios con sus identidades
+                    updateUserList("active-users-detail", "active-users-tags", data.active_users_list, "active-user");
+                    updateUserList("queued-users-detail", "queued-users-tags", data.queued_users_list, "queued-user");
                 }
+
             };
 
             cargarCombinaciones();
@@ -864,10 +938,77 @@
             input.value = '';
         }
 
+        function updateUserList(detailId, tagsContainerId, list, typeClass) {
+            const detailEl = document.getElementById(detailId);
+            const containerEl = document.getElementById(tagsContainerId);
+            
+            if (!list || list.length === 0) {
+                detailEl.style.display = "none";
+                containerEl.innerHTML = "";
+                return;
+            }
+            
+            detailEl.style.display = "flex";
+            containerEl.innerHTML = "";
+            
+            list.forEach(user => {
+                const isTaq = user.name.startsWith("[TAQ]");
+                let cleanName = isTaq ? user.name.replace("[TAQ]", "").trim() : user.name;
+                cleanName = cleanName.replace(/_/g, " • ");
+                
+                const badge = document.createElement("div");
+                badge.className = `user-tag ${typeClass}`;
+                badge.title = `Click para buscar y gestionar a: ${user.id}`;
+                
+                const icon = document.createElement("span");
+                icon.className = "tag-icon";
+                icon.textContent = "👤";
+                badge.appendChild(icon);
+                
+                if (isTaq) {
+                    const taqBadge = document.createElement("span");
+                    taqBadge.className = "taq-badge";
+                    taqBadge.textContent = "TAQ";
+                    badge.appendChild(taqBadge);
+                }
+                
+                const nameSpan = document.createElement("span");
+                nameSpan.textContent = cleanName;
+                badge.appendChild(nameSpan);
+                
+                badge.addEventListener("click", () => {
+                    buscarUsuarioEnPanel(user.id);
+                });
+                
+                containerEl.appendChild(badge);
+            });
+        }
+        
+        function buscarUsuarioEnPanel(userId) {
+            const panel = document.getElementById('combo-panel');
+            if (panel.style.display !== 'block') {
+                toggleComboPanel();
+            }
+            const searchInput = document.getElementById('combo-search');
+            searchInput.value = userId;
+            filtrarCombos(userId);
+            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Efecto visual de parpadeo temporal en el input de búsqueda
+            searchInput.style.transition = "border-color 0.15s, box-shadow 0.15s";
+            searchInput.style.borderColor = "#7c3aed";
+            searchInput.style.boxShadow = "0 0 0 3px rgba(124, 58, 237, 0.25)";
+            setTimeout(() => {
+                searchInput.style.borderColor = "";
+                searchInput.style.boxShadow = "";
+            }, 1000);
+        }
+
         function cerrarSesion() {
             localStorage.clear();
             window.location.reload();
         }
+
 
         document.getElementById("secret-input").addEventListener("keydown", function (event) {
             if (event.key === "Enter") {

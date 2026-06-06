@@ -64,6 +64,20 @@ async def broadcast_queue_positions():
 async def broadcast_admin_stats():
     """Envía el conteo de usuarios activos y en cola a los administradores."""
     if state.admin_connections:
+        active_users_list = [
+            {
+                "id": client_id,
+                "name": state.active_users_names.get(client_id, client_id),
+            }
+            for client_id in list(state.active_users)
+        ]
+        queued_users_list = [
+            {
+                "id": client_id,
+                "name": state.active_users_names.get(client_id, client_id),
+            }
+            for client_id in list(state.waiting_queue)
+        ]
         message = json.dumps(
             {
                 "type": "admin_stats",
@@ -71,6 +85,8 @@ async def broadcast_admin_stats():
                 "queued_users": len(state.waiting_queue),
                 "virtuales_procesados": state.virtuales_procesados,
                 "max_active_users": state.MAX_ACTIVE_USERS,
+                "active_users_list": active_users_list,
+                "queued_users_list": queued_users_list,
             }
         )
         for admin_ws in list(state.admin_connections):
