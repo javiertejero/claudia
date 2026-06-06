@@ -374,6 +374,21 @@
     </div>
     <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
         onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
+    <!-- Barra de herramientas del administrador en MODO TAQUILLA -->
+    <div id="taquilla-admin-bar" style="display:none; position:sticky; top:0; z-index:500; background: linear-gradient(90deg,#92400e,#b45309); padding: 10px 16px; display:none; align-items:center; justify-content:space-between; gap:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);">
+        <span style="color:#fef3c7; font-weight:800; font-size:0.95rem; letter-spacing:0.5px;">🎫 MODO TAQUILLA</span>
+        <div style="display:flex; gap:8px;">
+            <button id="btn-volver-admin" onclick="volverAAdmin()"
+                style="cursor:pointer; padding:7px 14px; border-radius:6px; border:none; background:#fef3c7; color:#92400e; font-weight:800; font-size:0.85rem; transition:background 0.15s;">
+                ⬅️ Volver a admin
+            </button>
+            <button id="btn-cerrar-sesion-admin" onclick="cerrarSesionAdmin()"
+                style="cursor:pointer; padding:7px 14px; border-radius:6px; border:2px solid #fef3c7; background:transparent; color:#fef3c7; font-weight:800; font-size:0.85rem; transition:background 0.15s, color 0.15s;">
+                🚪 Cerrar sesión de admin
+            </button>
+        </div>
+    </div>
+
     <div id="login-screen">
         <h2>Datos de reserva</h2>
         <input type="text" id="input-animal" placeholder="Animal" list="animals-list" required autofocus>
@@ -488,6 +503,11 @@
                     header.innerHTML = "🎫 MODO TAQUILLA";
                     header.style.color = "#d97706";
                 }
+
+                // Mostrar la barra de admin
+                const adminBar = document.getElementById('taquilla-admin-bar');
+                if (adminBar) adminBar.style.display = 'flex';
+
                 // Si venimos de la lista de combinaciones del admin, pre-rellenar y autologin
                 const taquillaCombo = localStorage.getItem('taquilla_combo');
                 if (taquillaCombo) {
@@ -597,6 +617,18 @@
                 solicitarWakeLock();
             }
         });
+
+        /** Navega de vuelta al panel de administración */
+        function volverAAdmin() {
+            window.location.href = '/admin';
+        }
+
+        /** Elimina el secreto de taquilla del almacenamiento y recarga */
+        function cerrarSesionAdmin() {
+            if (!confirm('¿Cerrar sesión de administrador? Se eliminará el acceso de taquilla en este navegador.')) return;
+            localStorage.removeItem('taquillaSecret');
+            window.location.href = '/';
+        }
 
         function cambiarIdentidad() {
             const warning1 = "⚠️ ¡ATENCIÓN! Vas a cerrar sesión y perder tu turno.\n\nEsta acción NO se puede deshacer.\n\n¿Estás completamente seguro?";
