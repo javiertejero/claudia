@@ -1044,6 +1044,15 @@
             ⚠️ MÁXIMO ALCANZADO
         </div>
 
+        <div id="timer-container" style="display: none; margin-bottom: 8px; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 6px;">
+            <span id="timer-display" style="color: #ef4444; font-family: monospace; font-size: 1.1em; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>
+        </div>
+
+        <div id="auto-save-container" style="display: none; margin-bottom: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; padding: 6px; border-radius: 6px; font-size: 0.8rem; text-align: center;">
+            <div style="margin-bottom: 4px;">¡Cupo completo! Guardando en <strong id="auto-save-timer" style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-family: monospace;">15</strong>s...</div>
+            <button onclick="cancelarAutoGuardado(true)" style="padding: 4px 8px; font-size: 0.75rem; background: #e2e8f0; color: #0f172a; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Cancelar Auto-Guardado</button>
+        </div>
+
         <div id="finish-button">
             <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); width: 100%; margin: 2px 0;">
             <button id="finalizar" onclick="finalizarReserva()"
@@ -1241,23 +1250,14 @@
             const banner = document.getElementById("status-banner");
             if (!banner) return;
 
-            // Guardamos el timer-display actual si existe
-            const display = document.getElementById("timer-display");
-            const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
-
             function actualizarBannerConCountdown() {
                 banner.className = "auto-saving";
                 banner.style.background = "";
-                banner.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; gap: 8px;">
-                        <div>
-                            ¡Cupo completo! Guardando reserva en 
-                            <strong id="auto-save-timer" style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${countdown}</strong>s...
-                            <button onclick="cancelarAutoGuardado(true)" style="margin-left: 10px; padding: 2px 6px; font-size: 0.8rem; background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-weight: bold;">Cancelar</button>
-                        </div>
-                        ${timerHtml}
-                    </div>
-                `;
+                banner.innerHTML = `¡Cupo completo! La reserva se guardará automáticamente.`;
+                const autoSaveContainer = document.getElementById('auto-save-container');
+                if (autoSaveContainer) autoSaveContainer.style.display = 'block';
+                const timerContainer = document.getElementById('timer-container');
+                if (timerContainer) timerContainer.style.display = 'none';
             }
 
             actualizarBannerConCountdown();
@@ -1293,10 +1293,12 @@
             if (banner) {
                 banner.className = "active";
                 banner.style.background = ""; // Restaurar color original del CSS (.active)
-                const display = document.getElementById("timer-display");
-                const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
-                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. ${timerHtml}`;
+                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas.`;
             }
+            const autoSaveContainer = document.getElementById('auto-save-container');
+            if (autoSaveContainer) autoSaveContainer.style.display = 'none';
+            const timerContainer = document.getElementById('timer-container');
+            if (timerContainer) timerContainer.style.display = 'flex';
         }
 
         // Función para solicitar el bloqueo de pantalla
@@ -1573,10 +1575,11 @@
                             document.getElementById('seat-counter').style.display = 'none';
                         } else {
                             if (!yaEstabaActivo) {
-                                // Inyectamos el reloj visualmente en el banner
-                                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
+                                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas.`;
                                 document.getElementById("sessions-container").style.display = "block";
                                 document.getElementById("seat-counter").style.display = "block";
+                                const timerContainer = document.getElementById('timer-container');
+                                if (timerContainer) timerContainer.style.display = 'flex';
                             }
                         }
                         document.getElementById("transfer-request-container").style.display = "block";
