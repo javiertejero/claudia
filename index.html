@@ -1177,7 +1177,97 @@
             // ACTIVAMOS EL WAKE LOCK AQUÍ (aprovechando el clic del usuario)
             solicitarWakeLock();
 
-            conectarWebSocket(animal, adjetivo);
+            if (taquillaModeActivo && !isTaquilla) {
+                mostrarSoloQR(animal, adjetivo);
+            } else {
+                conectarWebSocket(animal, adjetivo);
+            }
+        }
+
+        async function mostrarSoloQR(animal, adjetivo) {
+            clientId = `${animal.toLowerCase()}_${adjetivo.toLowerCase()}`;
+            const container = document.getElementById("app-screen");
+            
+            // Mostrar botón para cambiar de identidad
+            const btnCambiar = document.getElementById('btn-cambiar-identidad');
+            if (btnCambiar) btnCambiar.style.display = 'block';
+
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: white;">
+                    <h2 style="font-family: 'Permanent Marker', cursive, sans-serif; font-size: 2rem; color: #ef4444; margin-bottom: 1.5rem;">Torrelles en Dansa</h2>
+                    <div id="dia-espectaculo-box" style="margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+                        <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">
+                            🎟️ Mis Entradas
+                        </h3>
+                        <div id="dia-reservas-lista" style="color: #f1f5f9; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: left; background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px;">
+                            Cargando reservas...
+                        </div>
+                        <div id="dia-qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+                            <div id="dia-qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
+                            <div style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Código de Acceso</div>
+                            <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch(`/api/my-reservations?animal=${encodeURIComponent(animal)}&adjetivo=${encodeURIComponent(adjetivo)}`);
+                if (!res.ok) {
+                    document.getElementById("dia-reservas-lista").innerHTML = `
+                        <div style="color: #ef4444; font-weight: bold; text-align: center;">
+                            ❌ La combinación no es una credencial válida.
+                        </div>
+                    `;
+                    return;
+                }
+                const data = await res.json();
+                const seats = data.seats || [];
+                
+                const listEl = document.getElementById("dia-reservas-lista");
+                if (seats.length === 0) {
+                    listEl.innerHTML = `
+                        <div style="color: #e2e8f0; text-align: center; padding: 10px 0;">
+                            No tienes ninguna butaca reservada para este espectáculo.
+                        </div>
+                    `;
+                } else {
+                    let html = `<div style="font-weight: bold; margin-bottom: 8px; color: #38bdf8;">Usuario: ${data.user_id.replace("_", " • ").toUpperCase()}</div>`;
+                    seats.forEach(s => {
+                        html += `<div style="margin-bottom: 4px;">• Sesión ${s.session_time}: Fila ${s.fila}, Butaca ${s.butaca}</div>`;
+                    });
+                    listEl.innerHTML = html;
+
+                    // Generar QR
+                    const qrContainer = document.getElementById("dia-qrcode-container");
+                    const qrcodeEl = document.getElementById("dia-qrcode");
+                    if (qrContainer && qrcodeEl) {
+                        qrContainer.style.display = "block";
+                        const pathSafeAnimal = encodeURIComponent(animal.toLowerCase());
+                        const pathSafeAdjetivo = encodeURIComponent(adjetivo.toLowerCase());
+                        const qrUrl = `${appUrl}/check/${pathSafeAnimal}/${pathSafeAdjetivo}`;
+
+                        if (typeof QRCode !== 'undefined') {
+                            new QRCode(qrcodeEl, {
+                                text: qrUrl,
+                                width: 160,
+                                height: 160,
+                                colorDark: "#0f172a",
+                                colorLight: "#ffffff",
+                                correctLevel: QRCode.CorrectLevel.M
+                            });
+                        } else {
+                            qrcodeEl.innerText = "QR: " + qrUrl;
+                        }
+                    }
+                }
+            } catch (err) {
+                document.getElementById("dia-reservas-lista").innerHTML = `
+                    <div style="color: #ef4444; font-weight: bold; text-align: center;">
+                        ⚠️ Error de conexión con el servidor.
+                    </div>
+                `;
+            }
         }
 
         function tiempoAgotado(message) {
@@ -1530,6 +1620,9 @@
 
                     resumen += `• Sesión ${seat.session_time}: Fila ${fila}, Butaca ${butaca}\n`;
                 });
+                const base64Combo = btoa(unescape(encodeURIComponent(clientId)));
+                const directAccessUrl = `${appUrl}/?auth=${base64Combo}`;
+                resumen += `\n🔗 Enlace para ver tus entradas y código QR: ${directAccessUrl}\n`;
                 textoReservasFormateado = resumen;
             } else {
                 // TODO: When 0 we should enable at least the guardar reserva

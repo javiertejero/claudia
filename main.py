@@ -540,6 +540,70 @@ async def mark_seats_as_used(request: Request):
     return {"ok": True, "marked_count": marked_count, "used_at": now}
 
 
+@app.get("/api/my-reservations")
+async def get_my_reservations(animal: str = "", adjetivo: str = ""):
+    import math
+
+    from identity import normalize_combination
+
+    normalized = normalize_combination(f"{animal}_{adjetivo}")
+    if normalized not in state.VALID_COMBINATIONS:
+        return JSONResponse({"error": "Identidad no válida"}, status_code=404)
+
+    seats_list = []
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        async with db.execute(
+            "SELECT seat_number, session_time FROM seats WHERE owner_id = ? AND status = 'reserved'",
+            (normalized,),
+        ) as cursor:
+            rows = await cursor.fetchall()
+            for r in rows:
+                seat_num = r[0]
+                sess = r[1]
+
+                if seat_num <= 220:
+                    fila = math.ceil(seat_num / state.ASIENTOS_POR_FILA)
+                    pos_in_row = (seat_num - 1) % state.ASIENTOS_POR_FILA
+                    mitad = state.ASIENTOS_POR_FILA // 2
+                    if pos_in_row < mitad:
+                        butaca = (mitad - pos_in_row) * 2
+                    else:
+                        butaca = ((pos_in_row - mitad) * 2) + 1
+                else:
+                    fila = 12
+                    fila12_nums = [
+                        22,
+                        20,
+                        18,
+                        16,
+                        14,
+                        12,
+                        10,
+                        8,
+                        6,
+                        4,
+                        2,
+                        1,
+                        3,
+                        5,
+                        7,
+                        9,
+                        11,
+                        13,
+                        15,
+                        17,
+                        19,
+                        21,
+                        23,
+                    ]
+                    butaca = fila12_nums[seat_num - 221]
+
+                seats_list.append(
+                    {"session_time": sess, "fila": fila, "butaca": butaca}
+                )
+    return {"seats": seats_list, "user_id": normalized}
+
+
 @app.get("/api/mi-hash")
 async def get_mi_hash(id: str = ""):
     """Devuelve el hash_transferencia del usuario autenticado.
