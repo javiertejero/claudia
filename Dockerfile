@@ -28,9 +28,8 @@ RUN uv pip install --system aiosqlite "fastapi[standard]" "md2pdf[cli]"
 COPY . .
 
 # Generamos automáticamente los PDFs a partir de los archivos Markdown
-# (para acelerar el build he dejado este paso manual, el pdf queda guardado en git)
-# > RUN md2pdf --input manual_usuario.md --output static/manual_usuario.pdf
-# > RUN md2pdf --input manual_admin.md --output static/manual_admin.pdf
+RUN md2pdf --input static/manual_usuario.md --output static/manual_usuario.pdf
+RUN md2pdf --input static/manual_admin.md --output static/manual_admin.pdf
 
 # Exponemos el puerto de FastAPI
 EXPOSE 8000
