@@ -36,11 +36,13 @@ def test_login_and_book_seat(page: Page, test_server: str):
     my_seat = page.locator(".seat.my-seat").first
     expect(my_seat).to_be_visible(timeout=5000)
 
+    # Accept the confirm dialog when it appears
+    page.on("dialog", lambda dialog: dialog.accept())
+
     # Click "Guardar Reserva"
     page.locator("#finalizar").click()
 
-    # # It should redirect to /transferencia or /thanks depending on quota.
-    # page.wait_for_url(re.compile(r"/(thanks|transferencia)"))
-
-    # # Verify we are on the next screen
-    # expect(page).to_have_url(re.compile(r"/(thanks|transferencia)"))
+    # Verify we see the success screen
+    expect(page.locator("#app-screen")).to_contain_text(
+        "¡Reserva Guardada!", timeout=5000
+    )
