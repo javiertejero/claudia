@@ -10,7 +10,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Copiamos los archivos de dependencias (si tienes pyproject.toml)
 COPY pyproject.toml ./
 
-# Instalamos dependencias del sistema requeridas por WeasyPrint/md2pdf
+# Instalamos dependencias del sistema requeridas por WeasyPrint/md2pdf y soporte para emojis
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     libopenjp2-7-dev \
     shared-mime-info \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalamos las dependencias a nivel de sistema dentro del contenedor
