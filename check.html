@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Acceso - Torrelles en Dansa</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon-32x32.png" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Permanent+Marker&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-color: #f1f5f9;
+            --accent-color: #38bdf8;
+            --success-color: #16a34a;
+            --error-color: #dc2626;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Modos de fondo de alta visibilidad para el Acomodador */
+        body.state-valid {
+            --bg-color: var(--success-color);
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        body.state-invalid {
+            --bg-color: var(--error-color);
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        body.state-warning {
+            --bg-color: #b45309;
+            /* Marrón/naranja oscuro para advertencias */
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        header {
+            width: 100%;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .header-title {
+            font-family: 'Permanent Marker', cursive, sans-serif;
+            font-size: 2rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ef4444;
+            transition: color 0.4s;
+        }
+
+        body.state-valid .header-title,
+        body.state-invalid .header-title,
+        body.state-warning .header-title {
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        body.state-valid .subtitle,
+        body.state-invalid .subtitle,
+        body.state-warning .subtitle {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        main {
+            width: 100%;
+            max-width: 500px;
+            padding: 0 1rem 3rem 1rem;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+
+        body.state-valid label,
+        body.state-invalid label,
+        body.state-warning label {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            color: #fff;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-success {
+            background: #ffffff;
+            color: #16a34a;
+            font-size: 1.15rem;
+            padding: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-success:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+        }
+
+        /* Pantallas de Estado de Validación */
+        .status-display {
+            text-align: center;
+            margin: 1rem 0 1.5rem 0;
+            animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .status-badge {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .status-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .status-desc {
+            font-size: 1rem;
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }
+
+        /* Lista de Butacas */
+        .seats-section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .seat-item {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 0.6rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            border-left: 4px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .seat-item.closest {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #38bdf8;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .seat-item.closest::after {
+            content: "📍 SESIÓN PRÓXIMA";
+            font-size: 0.65rem;
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+            margin-left: 8px;
+        }
+
+        body.state-valid .seat-item.closest::after {
+            background: #ffffff;
+            color: var(--success-color);
+        }
+
+        .seat-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .seat-session {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        .seat-coords {
+            font-size: 1rem;
+        }
+
+        .seat-status-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .seat-status-badge.unused {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .seat-status-badge.used {
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Banner de duplicación / advertencia */
+        .warning-banner {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            text-align: left;
+            font-weight: 600;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .warning-banner .warning-icon {
+            font-size: 1.25rem;
+            margin-top: -2px;
+        }
+
+        /* Pantalla de acceso denegado */
+        #access-denied-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 2rem;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .denied-icon {
+            font-size: 5rem;
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+
+        .denied-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .denied-desc {
+            color: #94a3b8;
+            margin-bottom: 2rem;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+
+        /* Animaciones */
+        @keyframes popIn {
+            0% {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-5px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        /* Datalist styling override helper */
+        .nav-links {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .nav-link {
+            color: #38bdf8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        body.state-valid .nav-link,
+        body.state-invalid .nav-link,
+        body.state-warning .nav-link {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Pantalla 1: Acceso Denegado (Solicitar Token) -->
+    <div id="access-denied-screen" style="display: none;">
+        <div class="denied-icon">🔒</div>
+        <div class="denied-title">Acceso Denegado</div>
+        <div class="denied-desc">Se requiere una credencial autorizada para realizar el control de acceso en este
+            dispositivo.</div>
+
+        <div
+            style="width: 100%; max-width: 320px; background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+            <form id="token-form" onsubmit="saveToken(event)">
+                <div class="form-group">
+                    <label for="token-input">Token de Taquilla</label>
+                    <input type="password" id="token-input" placeholder="Introduce el token secreto" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Autorizar Dispositivo</button>
+            </form>
+            <div id="token-error"
+                style="color: #ef4444; font-size: 0.85rem; margin-top: 10px; font-weight: bold; display: none;">Token
+                incorrecto. Inténtalo de nuevo.</div>
+        </div>
+    </div>
+
+    <!-- Pantalla 2: Panel de Acomodador -->
+    <div id="acomodador-screen"
+        style="display: none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <header>
+            <h1 class="header-title">Control de Acceso</h1>
+            <div class="subtitle">Acomodador</div>
+        </header>
+
+        <main>
+            <!-- Banner de Advertencia (Duplicados) -->
+            <div id="warning-banner" class="warning-banner" style="display: none;">
+                <span class="warning-icon">⚠️</span>
+                <div>
+                    <strong>¡ALERTA DE ENTRADA DUPLICADA!</strong>
+                    <br><span id="warning-message">Esta entrada ya fue marcada como utilizada hace menos de 15
+                        minutos.</span>
+                </div>
+            </div>
+
+            <!-- Panel de Resultados del Escaneo -->
+            <div id="result-card" class="card" style="display: none;">
+                <div class="status-display">
+                    <span id="result-badge" class="status-badge">❓</span>
+                    <h2 id="result-title" class="status-title">Procesando...</h2>
+                    <p id="result-desc" class="status-desc">Cargando datos de la reserva...</p>
+                </div>
+
+                <!-- Detalles de Butacas -->
+                <div id="seats-container" style="display: none;">
+                    <div class="seats-section-title">Butacas de este Espectador</div>
+                    <div id="seats-list"></div>
+                </div>
+
+                <!-- Botón de Check-in -->
+                <button id="btn-validate" class="btn btn-success" style="display: none; margin-top: 1.5rem;"
+                    onclick="markAsUsed()">
+                    ✅ Marcar como utilizadas
+                </button>
+            </div>
+
+            <!-- Formulario de Consulta Manual -->
+            <div class="card">
+                <h3
+                    style="margin-top:0; color:#38bdf8; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    🔍 Validación Manual
+                </h3>
+                <form id="search-form" onsubmit="handleManualSearch(event)">
+                    <div class="form-group">
+                        <label for="input-animal">Animal</label>
+                        <input type="text" id="input-animal" list="animals-list" placeholder="Ej: tigresa" required
+                            autocomplete="off">
+                        <datalist id="animals-list"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-adjetivo">Adjetivo</label>
+                        <input type="text" id="input-adjetivo" list="adjectives-list" placeholder="Ej: valiente"
+                            required autocomplete="off">
+                        <datalist id="adjectives-list"></datalist>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                        Buscar Reserva
+                    </button>
+                </form>
+            </div>
+
+            <div class="nav-links">
+                <a href="#" class="nav-link" onclick="logoutToken(event)">🔒 Desautorizar dispositivo</a>
+                <a href="/" class="nav-link">🌐 Ir a la App</a>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let taquillaToken = localStorage.getItem("taquillaSecret");
+        let activeAnimal = "";
+        let activeAdjetivo = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            inicializarPantallas();
+            cargarDatalists();
+            procesarRuta();
+        });
+
+        // 1. GESTIÓN DE PANTALLAS Y SEGURIDAD
+        function inicializarPantallas() {
+            const deniedScreen = document.getElementById("access-denied-screen");
+            const mainScreen = document.getElementById("acomodador-screen");
+
+            if (!taquillaToken) {
+                deniedScreen.style.setProperty("display", "flex", "important");
+                mainScreen.style.setProperty("display", "none", "important");
+                document.body.className = "";
+            } else {
+                deniedScreen.style.setProperty("display", "none", "important");
+                mainScreen.style.setProperty("display", "flex", "important");
+            }
+        }
+
+        async function saveToken(e) {
+            e.preventDefault();
+            const tokenInput = document.getElementById("token-input").value.trim();
+            const errorEl = document.getElementById("token-error");
+            errorEl.style.display = "none";
+
+            try {
+                // Probamos el token con una consulta ficticia pero válida sintácticamente
+                const res = await fetch(`/api/check/info?animal=tigresa&adjetivo=valiente&token=${encodeURIComponent(tokenInput)}`);
+                if (res.status === 401) {
+                    errorEl.style.display = "block";
+                    tocarSonido(150, 400); // Buzz grave
+                } else {
+                    localStorage.setItem("taquillaSecret", tokenInput);
+                    taquillaToken = tokenInput;
+                    tocarSonido(880, 200); // Beep feliz
+                    inicializarPantallas();
+                    procesarRuta();
+                }
+            } catch (err) {
+                errorEl.innerText = "Error de conexión con el servidor.";
+                errorEl.style.display = "block";
+            }
+        }
+
+        function logoutToken(e) {
+            e.preventDefault();
+            if (confirm("¿Seguro que deseas desautorizar este dispositivo? Se borrará el token de localStorage.")) {
+                localStorage.removeItem("taquillaSecret");
+                taquillaToken = null;
+                inicializarPantallas();
+                document.getElementById("result-card").style.display = "none";
+                document.body.className = "";
+            }
+        }
+
+        // 2. CONFIGURACIÓN DE AUTOCOMPLETADO (DATALISTS)
+        function cargarDatalists() {
+            fetch("/api/config")
+                .then(res => res.json())
+                .then(data => {
+                    const animalsList = document.getElementById("animals-list");
+                    const adjectivesList = document.getElementById("adjectives-list");
+                    if (animalsList && data.animals) {
+                        animalsList.innerHTML = "";
+                        data.animals.forEach(animal => {
+                            const option = document.createElement("option");
+                            option.value = animal;
+                            animalsList.appendChild(option);
+                        });
+                    }
+                    if (adjectivesList && data.adjectives) {
+                        adjectivesList.innerHTML = "";
+                        data.adjectives.forEach(adj => {
+                            const option = document.createElement("option");
+                            option.value = adj;
+                            adjectivesList.appendChild(option);
+                        });
+                    }
+                })
+                .catch(err => console.error("Error al cargar config de autocomplete:", err));
+        }
+
+        // 3. PROCESAR RUTA (/check/animal/adjetivo)
+        function procesarRuta() {
+            if (!taquillaToken) return;
+
+            const pathParts = window.location.pathname.split("/").filter(p => p);
+            // Formato esperado: ['check', 'animal', 'adjetivo']
+            if (pathParts.length >= 3 && pathParts[0] === "check") {
+                const animal = decodeURIComponent(pathParts[1]);
+                const adjetivo = decodeURIComponent(pathParts[2]);
+
+                document.getElementById("input-animal").value = animal;
+                document.getElementById("input-adjetivo").value = adjetivo;
+
+                validarReserva(animal, adjetivo);
+            }
+        }
+
+        function handleManualSearch(e) {
+            e.preventDefault();
+            const animal = document.getElementById("input-animal").value.trim();
+            const adjetivo = document.getElementById("input-adjetivo").value.trim();
+            if (animal && adjetivo) {
+                validarReserva(animal, adjetivo);
+            }
+        }
+
+        // 4. LÓGICA DE VALIDACIÓN Y RENDIMIENTO DE ESTADOS
+        async function validarReserva(animal, adjetivo) {
+            activeAnimal = animal;
+            activeAdjetivo = adjetivo;
+
+            const resultCard = document.getElementById("result-card");
+            const badge = document.getElementById("result-badge");
+            const title = document.getElementById("result-title");
+            const desc = document.getElementById("result-desc");
+            const seatsContainer = document.getElementById("seats-container");
+            const seatsList = document.getElementById("seats-list");
+            const btnValidate = document.getElementById("btn-validate");
+            const warningBanner = document.getElementById("warning-banner");
+
+            resultCard.style.display = "block";
+            seatsContainer.style.display = "none";
+            btnValidate.style.display = "none";
+            warningBanner.style.display = "none";
+            document.body.className = "";
+
+            badge.innerText = "⏳";
+            title.innerText = "Procesando...";
+            desc.innerText = "Consultando base de datos...";
+
+            try {
+                const res = await fetch(`/api/check/info?animal=${encodeURIComponent(animal)}&adjetivo=${encodeURIComponent(adjetivo)}&token=${encodeURIComponent(taquillaToken)}`);
+
+                if (res.status === 401) {
+                    // El token guardado ya no es válido o expiró en servidor
+                    localStorage.removeItem("taquillaSecret");
+                    taquillaToken = null;
+                    inicializarPantallas();
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (!res.ok || data.valid === false) {
+                    // ENTRADA INVÁLIDA / INEXISTENTE
+                    document.body.className = "state-invalid";
+                    badge.innerText = "❌";
+                    title.innerText = "ACCESO DENEGADO";
+                    desc.innerText = data.reason || "La reserva no existe o es inválida.";
+                    tocarSonido(180, 500); // Sonido de error
+                    return;
+                }
+
+                // ENTRADA VÁLIDA
+                document.body.className = "state-valid";
+                badge.innerText = "✅";
+                title.innerText = "ACCESO AUTORIZADO";
+                desc.innerText = `Espectador: ${data.user_id.replace("_", " • ").toUpperCase()}`;
+
+                // Renderizar butacas
+                seatsList.innerHTML = "";
+                const closestSession = getClosestSession();
+
+                data.seats.forEach(seat => {
+                    const item = document.createElement("div");
+                    item.className = "seat-item";
+                    if (seat.session_time === closestSession) {
+                        item.classList.add("closest");
+                    }
+
+                    const info = document.createElement("div");
+                    info.className = "seat-info";
+                    info.innerHTML = `
+                        <span class="seat-session">Sesión ${seat.session_time}</span>
+                        <span class="seat-coords">Fila ${seat.fila}, Butaca ${seat.butaca}</span>
+                    `;
+
+                    const status = document.createElement("span");
+                    status.className = "seat-status-badge " + (seat.used_at ? "used" : "unused");
+                    status.innerText = seat.used_at ? "Utilizada" : "Disponible";
+
+                    item.appendChild(info);
+                    item.appendChild(status);
+                    seatsList.appendChild(item);
+                });
+
+                seatsContainer.style.display = "block";
+
+                // Mostrar botón de validar si hay alguna butaca disponible
+                const hasUnused = data.seats.some(s => !s.used_at);
+                if (hasUnused) {
+                    btnValidate.style.display = "block";
+                }
+
+                // Aviso de duplicados en puerta (< 15 minutos)
+                if (data.already_used_recently) {
+                    // Cambiar fondo a advertencia/aviso
+                    document.body.className = "state-warning";
+                    warningBanner.style.display = "flex";
+
+                    const diffSeconds = Math.round(data.server_time - data.recently_used_time);
+                    const minutes = Math.floor(diffSeconds / 60);
+                    const seconds = diffSeconds % 60;
+
+                    let timeStr = "";
+                    if (minutes > 0) {
+                        timeStr = `${minutes} min ${seconds} s`;
+                    } else {
+                        timeStr = `${seconds} s`;
+                    }
+
+                    document.getElementById("warning-message").innerText = `Esta entrada ya fue marcada como utilizada hace ${timeStr}.`;
+                    tocarSonido(220, 600); // Sonido de alerta
+                } else {
+                    tocarSonido(587.33, 250); // Beep de éxito (Re agudo)
+                }
+
+            } catch (err) {
+                document.body.className = "state-invalid";
+                badge.innerText = "⚠️";
+                title.innerText = "ERROR DE CONEXIÓN";
+                desc.innerText = "No se pudo conectar con el servidor.";
+                tocarSonido(150, 400);
+            }
+        }
+
+        // 5. ACCIÓN DE MARCAR COMO UTILIZADAS
+        async function markAsUsed() {
+            if (!activeAnimal || !activeAdjetivo || !taquillaToken) return;
+
+            const btnValidate = document.getElementById("btn-validate");
+            btnValidate.disabled = true;
+            btnValidate.innerText = "⏳ Procesando...";
+
+            try {
+                const res = await fetch("/api/check/use", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        animal: activeAnimal,
+                        adjetivo: activeAdjetivo,
+                        token: taquillaToken
+                    })
+                });
+
+                if (res.ok) {
+                    tocarSonido(880, 300); // Beep de confirmación final
+                    // Volver a consultar para refrescar la UI y activar la advertencia si es el caso
+                    validarReserva(activeAnimal, activeAdjetivo);
+                } else {
+                    alert("No se pudo marcar las butacas como utilizadas.");
+                    btnValidate.disabled = false;
+                    btnValidate.innerText = "✅ Marcar como utilizadas";
+                }
+            } catch (err) {
+                alert("Error de conexión al guardar el check-in.");
+                btnValidate.disabled = false;
+                btnValidate.innerText = "✅ Marcar como utilizadas";
+            }
+        }
+
+        // 6. UTILS Y REPRODUCTOR DE SONIDOS (AUDIO HÁPTICO)
+        function getClosestSession(currentDate = new Date()) {
+            const hours = currentDate.getHours();
+            const minutes = currentDate.getMinutes();
+            const currentTotalMinutes = hours * 60 + minutes;
+
+            const sessions = [
+                { name: "11h", time: 11 * 60 + 0 },
+                { name: "12:45h", time: 12 * 60 + 45 },
+                { name: "18h", time: 18 * 60 + 0 }
+            ];
+
+            let closest = sessions[0];
+            let minDiff = Infinity;
+
+            sessions.forEach(s => {
+                const diff = Math.abs(s.time - currentTotalMinutes);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = s;
+                }
+            });
+
+            return closest.name;
+        }
+
+        function tocarSonido(frecuencia, duracionMs) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frecuencia, ctx.currentTime);
+
+                gain.gain.setValueAtTime(0.001, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duracionMs / 1000);
+
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + duracionMs / 1000 + 0.05);
+
+                // Vibración háptica en dispositivos móviles
+                if (navigator.vibrate) {
+                    if (frecuencia < 300) {
+                        navigator.vibrate([200, 100, 200]); // Vibración error
+                    } else {
+                        navigator.vibrate(100); // Vibración simple
+                    }
+                }
+            } catch (e) {
+                console.warn("Audio Context no disponible o bloqueado por navegador.");
+            }
+        }
+    </script>
+</body>
+
+</html>
