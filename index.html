@@ -323,12 +323,46 @@
             font-weight: bold;
             color: #94a3b8;
             font-size: 0.9rem;
-            text-align: right;
-            padding-right: 5px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .pasillo {
+        .row-header-spacer {
             width: 100%;
+        }
+
+        .pasillo-step {
+            background: #18181b; /* zinc 900 */
+            border-top: 1px solid #3f3f46; /* zinc 700 - step nose highlight */
+            border-bottom: 2px solid #09090b; /* zinc 950 - shadow */
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .pasillo-step.left {
+            border-left: 3px solid #f59e0b; /* LED amber light left */
+            box-shadow: inset 4px 0 6px -2px rgba(245, 158, 11, 0.4);
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .pasillo-step.center {
+            color: #f1f5f9;
+            font-size: 0.8rem;
+            font-weight: 800;
+            background: linear-gradient(to bottom, #27272a, #18181b);
+        }
+
+        .pasillo-step.right {
+            border-right: 3px solid #f59e0b; /* LED amber light right */
+            box-shadow: inset -4px 0 6px -2px rgba(245, 158, 11, 0.4);
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
         }
 
         .seat {
@@ -356,8 +390,9 @@
         }
 
         .reserved {
-            background: rgba(255, 255, 255, 0.03);
-            color: rgba(255, 255, 255, 0.2);
+            background: #27272a;
+            color: #71717a;
+            border: 1px solid #3f3f46;
             cursor: not-allowed;
         }
 
@@ -372,6 +407,12 @@
 
         .my-seat:hover {
             background: #d97706;
+        }
+
+        .auto-saving {
+            background: #065f46 !important;
+            color: #ffffff !important;
+            border: 2px solid #10b981;
         }
 
         .escenario-wrapper {
@@ -877,8 +918,8 @@
             const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
 
             function actualizarBannerConCountdown() {
-                banner.className = "active";
-                banner.style.background = "#065f46"; // Un verde oscuro indicando éxito pero temporizado
+                banner.className = "auto-saving";
+                banner.style.background = ""; 
                 banner.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; gap: 8px;">
                         <div>
@@ -1383,12 +1424,12 @@
                 // Grid 1: Estándar (Filas 1 a 11)
                 const grid = document.createElement("div");
                 grid.className = "grid";
-                grid.style.gridTemplateColumns = `max-content repeat(${mitad}, 1fr) repeat(3, 1fr) repeat(${mitad}, 1fr)`;
+                grid.style.gridTemplateColumns = `1fr repeat(${mitad}, 1fr) repeat(3, 1fr) repeat(${mitad}, 1fr) 1fr`;
 
                 // Grid 2: Fila 12 Anómala
                 const gridFila12 = document.createElement("div");
                 gridFila12.className = "grid";
-                gridFila12.style.gridTemplateColumns = `max-content repeat(23, 1fr)`;
+                gridFila12.style.gridTemplateColumns = `1fr repeat(23, 1fr) 1fr`;
 
                 let rowCounter = 1;
 
@@ -1400,19 +1441,24 @@
                         const posInRow = index % ASIENTOS_POR_FILA;
 
                         if (posInRow === 0) {
-                            const rowHeader = document.createElement("div");
-                            rowHeader.className = "row-header";
-                            rowHeader.innerText = `F${rowCounter}`;
-                            grid.appendChild(rowHeader);
-                            rowCounter++;
+                            const leftSpacer = document.createElement("div");
+                            leftSpacer.className = "row-header-spacer";
+                            grid.appendChild(leftSpacer);
                         }
 
                         if (posInRow === mitad) {
-                            for (let i = 0; i < 3; i++) {
-                                const spacer = document.createElement("div");
-                                spacer.className = "pasillo";
-                                grid.appendChild(spacer);
-                            }
+                            const stepLeft = document.createElement("div");
+                            stepLeft.className = "pasillo-step left";
+                            grid.appendChild(stepLeft);
+
+                            const stepCenter = document.createElement("div");
+                            stepCenter.className = "pasillo-step center";
+                            stepCenter.innerText = `F${rowCounter}`;
+                            grid.appendChild(stepCenter);
+
+                            const stepRight = document.createElement("div");
+                            stepRight.className = "pasillo-step right";
+                            grid.appendChild(stepRight);
                         }
 
                         // Fórmula invertida
@@ -1423,10 +1469,10 @@
                         const posInRow = seat.seat_number - 221;
 
                         if (posInRow === 0) {
-                            const rowHeader = document.createElement("div");
-                            rowHeader.className = "row-header";
-                            rowHeader.innerText = `F12`;
-                            gridFila12.appendChild(rowHeader);
+                            const leftHeader = document.createElement("div");
+                            leftHeader.className = "row-header";
+                            leftHeader.innerText = `F12`;
+                            gridFila12.appendChild(leftHeader);
                         }
 
                         // Matriz invertida
@@ -1475,8 +1521,22 @@
                     // Separación de inyección al DOM
                     if (!isFila12) {
                         grid.appendChild(btn);
+                        const posInRow = index % ASIENTOS_POR_FILA;
+                        if (posInRow === ASIENTOS_POR_FILA - 1) {
+                            const rightSpacer = document.createElement("div");
+                            rightSpacer.className = "row-header-spacer";
+                            grid.appendChild(rightSpacer);
+                            rowCounter++;
+                        }
                     } else {
                         gridFila12.appendChild(btn);
+                        const posInRow = seat.seat_number - 221;
+                        if (posInRow === 22) {
+                            const rightHeader = document.createElement("div");
+                            rightHeader.className = "row-header";
+                            rightHeader.innerText = `F12`;
+                            gridFila12.appendChild(rightHeader);
+                        }
                     }
                 });
 
