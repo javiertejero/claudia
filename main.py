@@ -354,6 +354,31 @@ async def get_transfer_page():
     return FileResponse("transfer.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
+
+@app.get("/favicon-32x32.png", include_in_schema=False)
+async def favicon_32():
+    return FileResponse("static/favicon-32x32.png")
+
+
+@app.get("/favicon-192x192.png", include_in_schema=False)
+async def favicon_192():
+    return FileResponse("static/favicon-192x192.png")
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def apple_touch_icon():
+    return FileResponse("static/apple-touch-icon.png")
+
+
+@app.get("/site.webmanifest", include_in_schema=False)
+async def webmanifest():
+    return FileResponse("static/site.webmanifest")
+
+
 @app.get("/api/config")
 async def get_config():
     return {
