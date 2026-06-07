@@ -164,6 +164,68 @@
             margin-left: 8px !important;
         }
 
+        /* Hint de rotación para pantallas móviles verticales */
+        #rotate-device-hint {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            z-index: 10000;
+            background: rgba(220, 38, 38, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            animation: slideDownFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideDownFade {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes phone-rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+            30% {
+                transform: rotate(90deg);
+            }
+            70% {
+                transform: rotate(90deg);
+            }
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        .rotate-icon {
+            font-size: 1.3rem;
+            animation: phone-rotate 3s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) and (orientation: portrait) {
+            #rotate-device-hint {
+                display: flex;
+            }
+        }
+
         .queued {
             background: #fef08a;
             color: #854d0e;
@@ -728,6 +790,12 @@
     </div>
 
     <div id="app-screen">
+        <!-- Hint para rotar la pantalla en móviles en vertical -->
+        <div id="rotate-device-hint" role="status">
+            <span class="rotate-icon">📱</span>
+            <span style="flex: 1; text-align: left;">Recomendamos usar el móvil en horizontal para seleccionar tus butacas.</span>
+            <button onclick="document.getElementById('rotate-device-hint').style.setProperty('display', 'none', 'important')" style="background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; padding: 0 4px; line-height: 1; margin-left: 8px;">✕</button>
+        </div>
         <h2>Espectáculo de Danza</h2>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
         <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
