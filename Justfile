@@ -1,7 +1,10 @@
-launch:
+download_music:
+    @[ -f static/valse_gymnopedie.mp3 ] || curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3"
+
+launch: download_music
     uv run --frozen --env-file .env fastapi run main.py
 
-launch_for_testing:
+launch_for_testing: download_music
     RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True uv run --frozen --env-file .env fastapi run main.py
 
 lint:

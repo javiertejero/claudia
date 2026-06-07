@@ -98,17 +98,14 @@
                 font-size: 1.3rem;
                 letter-spacing: 1px;
             }
-
             h1 {
                 font-size: 2rem;
                 margin-bottom: 2rem;
                 letter-spacing: 3px;
             }
-
             p {
                 margin-bottom: 1.8rem;
             }
-
             .firma {
                 font-size: 1rem;
                 margin-top: 3rem;
@@ -120,20 +117,16 @@
 <body>
 
     <!-- Botón para volver a la página principal -->
-    <a href="/"
-        style="position: absolute; top: 20px; left: 20px; z-index: 100; color: #feda4a; text-decoration: none; font-size: 1.1rem; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); transition: all 0.2s ease-in-out; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px;"
-        onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';"
-        onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
+    <a href="/" style="position: absolute; top: 20px; left: 20px; z-index: 100; color: #feda4a; text-decoration: none; font-size: 1.1rem; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); transition: all 0.2s ease-in-out; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
         ← Volver
     </a>
 
     <!-- Botón para controlar la música -->
-    <button id="btn-musica" onclick="toggleMusica()"
-        style="position: absolute; top: 20px; right: 20px; z-index: 100; color: #feda4a; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out;"
-        onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';"
-        onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
+    <button id="btn-musica" onclick="toggleMusica()" style="position: absolute; top: 20px; right: 20px; z-index: 100; color: #feda4a; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out;" onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
         <span>🎵 Play Música</span>
     </button>
+
+    <audio id="audio-agradecimientos" src="/static/valse_gymnopedie.mp3" loop></audio>
 
     <div class="fade"></div>
 
@@ -160,171 +153,24 @@
     </div>
 
     <script>
-        let audioCtx = null;
         let isPlaying = false;
-        let nextNoteTimeout = null;
-        let noteIndex = 0;
-        let delayNode = null;
-        let feedbackNode = null;
-        let mainVolumeNode = null;
-
-        const NOTES = {
-            'D4': 293.66, 'E4': 329.63, 'F#4': 369.99, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88, 'C#5': 554.37,
-            'D5': 587.33, 'E5': 659.25, 'F#5': 739.99, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77, 'C#6': 1109.73,
-            'D6': 1174.66
-        };
-
-        const TEMPO = 105; // BPM
-        const BEAT = 60 / TEMPO; // Duración de un pulso en segundos
-
-        // Melodía de "(I've Had) The Time of My Life" (Estribillo principal)
-        // Cada elemento es: [nombre_nota, pulsos]
-        const melody = [
-            // I've had
-            ['F#5', 1.5], [null, 0.5],
-            ['E5', 1.5], [null, 0.5],
-            // the time of my life
-            ['D5', 0.5],
-            ['F#5', 0.5],
-            ['E5', 0.5],
-            ['D5', 2.0],
-            [null, 0.5],
-            // and I've never felt this way before
-            ['D5', 0.5],
-            ['E5', 0.5],
-            ['F#5', 0.5],
-            ['G5', 0.5],
-            ['A5', 1.0],
-            ['G5', 0.5],
-            ['F#5', 0.5],
-            ['E5', 1.0],
-            ['D5', 2.0],
-            [null, 1.0],
-
-            // yes I swear, it's the truth
-            ['F#5', 1.5], [null, 0.5],
-            ['E5', 1.5], [null, 0.5],
-            ['D5', 0.5],
-            ['E5', 0.5],
-            ['F#5', 1.0],
-            ['E5', 1.0],
-            ['D5', 2.0],
-            [null, 1.0],
-
-            // and I owe it all to you
-            ['D5', 0.5],
-            ['E5', 0.5],
-            ['F#5', 0.5],
-            ['G5', 0.5],
-            ['A5', 1.0],
-            ['G5', 0.5],
-            ['F#5', 0.5],
-            ['E5', 1.0],
-            ['D5', 3.0],
-            [null, 2.0]
-        ];
-
-        function initAudio() {
-            // Inicializar el AudioContext
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-            mainVolumeNode = audioCtx.createGain();
-            mainVolumeNode.gain.setValueAtTime(0.4, audioCtx.currentTime); // Volumen general al 40%
-
-            // Efecto de eco espacial para dar inmersión galáctica
-            delayNode = audioCtx.createDelay(1.0);
-            delayNode.delayTime.value = 0.35; // Eco a 350ms
-
-            feedbackNode = audioCtx.createGain();
-            feedbackNode.gain.value = 0.3; // 30% de realimentación del eco
-
-            // Conexión del delay en bucle
-            delayNode.connect(feedbackNode);
-            feedbackNode.connect(delayNode);
-
-            // Conectar la salida al destino
-            mainVolumeNode.connect(audioCtx.destination);
-            delayNode.connect(mainVolumeNode);
-        }
-
-        function playNote(freq, startTime, duration) {
-            if (!audioCtx) return;
-
-            // Oscilador para el tono principal
-            const osc = audioCtx.createOscillator();
-            const noteVolume = audioCtx.createGain();
-
-            osc.connect(noteVolume);
-            noteVolume.connect(mainVolumeNode);
-            noteVolume.connect(delayNode);
-
-            osc.type = 'sine'; // Tono dulce tipo campana o caja de música
-            osc.frequency.setValueAtTime(freq, startTime);
-
-            // Armónico superior para dar el timbre metálico de caja de música
-            const subOsc = audioCtx.createOscillator();
-            const subVolume = audioCtx.createGain();
-
-            subOsc.connect(subVolume);
-            subVolume.connect(mainVolumeNode);
-            subVolume.connect(delayNode);
-
-            subOsc.type = 'sine';
-            subOsc.frequency.setValueAtTime(freq * 2, startTime);
-
-            // Envolventes de ganancia
-            noteVolume.gain.setValueAtTime(0, startTime);
-            noteVolume.gain.linearRampToValueAtTime(0.18, startTime + 0.01);
-            noteVolume.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-            subVolume.gain.setValueAtTime(0, startTime);
-            subVolume.gain.linearRampToValueAtTime(0.04, startTime + 0.01);
-            subVolume.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.7);
-
-            osc.start(startTime);
-            osc.stop(startTime + duration + 0.1);
-
-            subOsc.start(startTime);
-            subOsc.stop(startTime + duration + 0.1);
-        }
-
-        function playMelodyLoop() {
-            if (!isPlaying) return;
-
-            const currentItem = melody[noteIndex];
-            const noteName = currentItem[0];
-            const beats = currentItem[1];
-            const duration = beats * BEAT;
-
-            if (noteName && NOTES[noteName]) {
-                playNote(NOTES[noteName], audioCtx.currentTime, duration);
-            }
-
-            noteIndex = (noteIndex + 1) % melody.length;
-            nextNoteTimeout = setTimeout(playMelodyLoop, duration * 1000);
-        }
 
         function toggleMusica() {
             const btn = document.getElementById("btn-musica");
-            if (!audioCtx) {
-                initAudio();
-            }
-
+            const audio = document.getElementById("audio-agradecimientos");
+            
             if (isPlaying) {
+                audio.pause();
                 isPlaying = false;
-                clearTimeout(nextNoteTimeout);
-                if (audioCtx.state === 'running') {
-                    audioCtx.suspend();
-                }
                 btn.innerHTML = "<span>🎵 Play Música</span>";
             } else {
-                isPlaying = true;
-                noteIndex = 0;
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                playMelodyLoop();
-                btn.innerHTML = "<span>🔇 Silenciar</span>";
+                audio.play().then(() => {
+                    isPlaying = true;
+                    btn.innerHTML = "<span>🔇 Silenciar</span>";
+                }).catch(err => {
+                    console.error("Error al jugar audio:", err);
+                    alert("No se pudo iniciar el audio. Por favor, inténtalo de nuevo.");
+                });
             }
         }
     </script>

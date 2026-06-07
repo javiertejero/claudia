@@ -10,7 +10,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Copiamos los archivos de dependencias (si tienes pyproject.toml)
 COPY pyproject.toml ./
 
-# Instalamos dependencias del sistema requeridas por WeasyPrint/md2pdf y soporte para emojis
+# Instalamos dependencias del sistema requeridas por WeasyPrint/md2pdf, soporte para emojis y curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
@@ -19,7 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenjp2-7-dev \
     shared-mime-info \
     fonts-noto-color-emoji \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Descargamos la música de agradecimientos en la carpeta static del contenedor
+RUN mkdir -p static && curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3"
 
 # Instalamos las dependencias a nivel de sistema dentro del contenedor
 RUN uv pip install --system aiosqlite "fastapi[standard]" "md2pdf[cli]"

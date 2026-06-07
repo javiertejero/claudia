@@ -15,3 +15,5 @@ reservas.db
 reservas_espectaculo.csv
 .DS_Store
 .env_docker
+static/valse_gymnopedie.mp3
+
