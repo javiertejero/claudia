@@ -354,6 +354,12 @@ async def get_transfer_page():
     return FileResponse("transfer.html")
 
 
+@app.get("/thanks")
+@app.get("/thanks/")
+async def get_thanks_page():
+    return FileResponse("agradecimientos.html")
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("static/favicon.ico")
