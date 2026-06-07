@@ -123,7 +123,8 @@ async def cleanup_waiting_queue():
         logger.info("Active users: %s", state.active_users)
         logger.info("Waiting users: %s", state.waiting_queue)
         for active_user, timeout in state.active_user_expires.items():
-            logger.info(f"User {active_user} expires at {timeout}")
+            expire_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timeout))
+            logger.info(f"User {active_user} expires at {expire_str}")
 
         if stale_active:
             logger.info(
