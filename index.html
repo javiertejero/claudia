@@ -692,7 +692,7 @@
         <span class="disconnect-icon">⚠️</span>
         <span class="disconnect-msg">Se ha perdido la conexión con el servidor. Tu posición en cola está
             guardada.</span>
-        <button id="btn-reconnect" onclick="window.location.reload()">&#128260; Reconectar</button>
+        <button id="btn-reconnect" onclick="intentarReconectarManual()">&#128260; Reconectar</button>
     </div>
 
     <!-- Cabecera del Espectáculo -->
@@ -929,6 +929,10 @@
         let autoSaveInterval = null;
         let autoSaveCancelled = false;
         let esActivo = false;
+        let duplicateFlag = false;
+        let reconnectInterval = null;
+        let currentAnimal = "";
+        let currentAdjetivo = "";
 
         function iniciarAutoGuardado() {
             if (autoSaveTimeout || autoSaveCancelled || finalizado || tiempoAgotadoFlag) return;
@@ -1101,7 +1105,16 @@
             `;
         }
 
+        function intentarReconectarManual() {
+            if (currentAnimal && currentAdjetivo) {
+                console.log("Intentando reconectar manualmente...");
+                conectarWebSocket(currentAnimal, currentAdjetivo);
+            }
+        }
+
         function conectarWebSocket(animal, adjetivo) {
+            currentAnimal = animal;
+            currentAdjetivo = adjetivo;
             clientId = `${animal.toLowerCase()}_${adjetivo.toLowerCase()}`;
 
             const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -1114,6 +1127,17 @@
             ws = new WebSocket(wsUrl);
             const banner = document.getElementById("status-banner");
             const container = document.getElementById("sessions-container");
+
+            ws.onopen = function () {
+                console.log("WebSocket conectado.");
+                const discBanner = document.getElementById('disconnect-banner');
+                if (discBanner) discBanner.style.display = 'none';
+
+                if (reconnectInterval) {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            };
 
             ws.onmessage = function (event) {
                 const data = JSON.parse(event.data);
@@ -1198,6 +1222,7 @@
                 if (data.type === "duplicate") {
                     clearInterval(timerInterval);
                     liberarWakeLock();
+                    duplicateFlag = true;
                     // Borramos toda la interfaz sustituyendo el body
                     document.body.innerHTML = `
                         <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 10vh auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
@@ -1213,9 +1238,16 @@
 
             ws.onclose = function () {
                 // Do not show the banner if the user intentionally finished or timed out
-                if (finalizado || tiempoAgotadoFlag) return;
-                const banner = document.getElementById('disconnect-banner');
-                if (banner) banner.style.display = 'flex';
+                if (finalizado || tiempoAgotadoFlag || duplicateFlag) return;
+                const discBanner = document.getElementById('disconnect-banner');
+                if (discBanner) discBanner.style.display = 'flex';
+
+                if (!reconnectInterval) {
+                    reconnectInterval = setInterval(() => {
+                        console.log("Intentando reconectar automáticamente...");
+                        conectarWebSocket(currentAnimal, currentAdjetivo);
+                    }, 10000);
+                }
             };
         }
 
