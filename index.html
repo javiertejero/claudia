@@ -879,6 +879,7 @@
     </style>
     <!-- Librería para renderizar Markdown a HTML -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/ticket-card.js" defer></script>
 </head>
 
 <body>
@@ -941,17 +942,18 @@
         <div id="status-banner" class="queued">Conectando al servidor...</div>
 
         <!-- Tarjeta de Resumen de Reservas y Código QR -->
-        <div id="resumen-reservas-box" style="display:none; margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
-            <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1rem;">
-                🎟️ Tus Butacas Reservadas
-            </h3>
-            <div id="resumen-reservas-lista" style="color: #f1f5f9; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: left; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;"></div>
-            
-            <div id="qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+        <div id="resumen-reservas-box" style="display:none; margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <div id="qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto 1.5rem auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
                 <div id="qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
                 <div style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Código de Acceso</div>
                 <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta</div>
             </div>
+
+            <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1.5rem;">
+                🎟️ Tus Butacas Reservadas
+            </h3>
+            
+            <div id="resumen-reservas-lista" style="display: flex; flex-direction: column; gap: 12px; text-align: left; width: 100%;"></div>
         </div>
 
         <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
@@ -1082,53 +1084,53 @@
                             adjectivesList.appendChild(option);
                         });
                     }
+
+                    if (isTaquilla) {
+                        // MODO TAQUILLA: Preparar UI especial y asegurar que no haya auto-login
+                        if (header) {
+                            header.innerHTML = "🎫 MODO TAQUILLA";
+                            header.style.color = "#d97706";
+                        }
+
+                        // Mostrar la barra de admin
+                        const adminBar = document.getElementById('taquilla-admin-bar');
+                        if (adminBar) adminBar.style.display = 'flex';
+
+                        // Si venimos de la lista de combinaciones del admin, pre-rellenar y autologin
+                        const taquillaCombo = localStorage.getItem('taquilla_combo');
+                        if (taquillaCombo) {
+                            localStorage.removeItem('taquilla_combo');
+                            const parts = taquillaCombo.split('_');
+                            if (parts.length === 2) {
+                                if (inputAnimal) inputAnimal.value = parts[0];
+                                if (inputAdjetivo) inputAdjetivo.value = parts[1];
+                                iniciarApp();
+                                return;
+                            }
+                        }
+                        if (inputAnimal) inputAnimal.value = "";
+                        if (inputAdjetivo) inputAdjetivo.value = "";
+                    } else {
+                        // MODO NORMAL: Recuperar datos del localStorage
+                        const storedAnimal = localStorage.getItem("animal");
+                        const storedAdjetivo = localStorage.getItem("adjetivo");
+
+                        if (inputAnimal) inputAnimal.value = storedAnimal || "";
+                        if (inputAdjetivo) inputAdjetivo.value = storedAdjetivo || "";
+
+                        // Mostrar botón de cambio de identidad si ya tiene datos guardados
+                        if (storedAnimal && storedAdjetivo) {
+                            const btnCambiar = document.getElementById('btn-cambiar-identidad');
+                            if (btnCambiar) btnCambiar.style.display = 'block';
+                        }
+
+                        // Si ya tiene los datos guardados, le saltamos la pantalla de login automáticamente
+                        if (storedAnimal && storedAdjetivo) {
+                            iniciarApp();
+                        }
+                    }
                 })
                 .catch(err => console.error("Error al cargar config de autocompletado:", err));
-
-            if (isTaquilla) {
-                // MODO TAQUILLA: Preparar UI especial y asegurar que no haya auto-login
-                if (header) {
-                    header.innerHTML = "🎫 MODO TAQUILLA";
-                    header.style.color = "#d97706";
-                }
-
-                // Mostrar la barra de admin
-                const adminBar = document.getElementById('taquilla-admin-bar');
-                if (adminBar) adminBar.style.display = 'flex';
-
-                // Si venimos de la lista de combinaciones del admin, pre-rellenar y autologin
-                const taquillaCombo = localStorage.getItem('taquilla_combo');
-                if (taquillaCombo) {
-                    localStorage.removeItem('taquilla_combo');
-                    const parts = taquillaCombo.split('_');
-                    if (parts.length === 2) {
-                        if (inputAnimal) inputAnimal.value = parts[0];
-                        if (inputAdjetivo) inputAdjetivo.value = parts[1];
-                        iniciarApp();
-                        return;
-                    }
-                }
-                if (inputAnimal) inputAnimal.value = "";
-                if (inputAdjetivo) inputAdjetivo.value = "";
-            } else {
-                // MODO NORMAL: Recuperar datos del localStorage
-                const storedAnimal = localStorage.getItem("animal");
-                const storedAdjetivo = localStorage.getItem("adjetivo");
-
-                if (inputAnimal) inputAnimal.value = storedAnimal || "";
-                if (inputAdjetivo) inputAdjetivo.value = storedAdjetivo || "";
-
-                // Mostrar botón de cambio de identidad si ya tiene datos guardados
-                if (storedAnimal && storedAdjetivo) {
-                    const btnCambiar = document.getElementById('btn-cambiar-identidad');
-                    if (btnCambiar) btnCambiar.style.display = 'block';
-                }
-
-                // Si ya tiene los datos guardados, le saltamos la pantalla de login automáticamente
-                if (storedAnimal && storedAdjetivo) {
-                    iniciarApp();
-                }
-            }
 
             // Enter en cualquier campo envia el formulario si ambos están rellenos
             [inputAnimal, inputAdjetivo].forEach(el => {
@@ -1342,17 +1344,20 @@
             container.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: white;">
                     <h2 style="font-family: 'Permanent Marker', cursive, sans-serif; font-size: 2rem; color: #ef4444; margin-bottom: 1.5rem;">Torrelles en Dansa</h2>
-                    <div id="dia-espectaculo-box" style="margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
-                        <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">
-                            🎟️ Mis Entradas
-                        </h3>
-                        <div id="dia-reservas-lista" style="color: #f1f5f9; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: left; background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px;">
-                            Cargando reservas...
-                        </div>
-                        <div id="dia-qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+                    <div id="dia-espectaculo-box" style="margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+                        
+                        <div id="dia-qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto 1.5rem auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
                             <div id="dia-qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
                             <div style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Código de Acceso</div>
                             <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta</div>
+                        </div>
+
+                        <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">
+                            🎟️ Mis Entradas
+                        </h3>
+                        
+                        <div id="dia-reservas-lista" style="display: flex; flex-direction: column; gap: 12px; text-align: left; width: 100%;">
+                            Cargando reservas...
                         </div>
                     </div>
                 </div>
@@ -1379,9 +1384,9 @@
                         </div>
                     `;
                 } else {
-                    let html = `<div style="font-weight: bold; margin-bottom: 8px; color: #38bdf8;">Usuario: ${data.user_id.replace("_", " • ").toUpperCase()}</div>`;
+                    let html = `<div style="font-weight: bold; margin-bottom: 12px; color: #38bdf8; text-align: center; width: 100%;">USUARIO: ${data.user_id.replace("_", " • ").toUpperCase()}</div>`;
                     seats.forEach(s => {
-                        html += `<div style="margin-bottom: 4px;">• Sesión ${s.session_time}: Fila ${s.fila}, Butaca ${s.butaca}</div>`;
+                        html += `<ticket-card user-id="${data.user_id}" session-time="${s.session_time}" fila="${s.fila}" butaca="${s.butaca}"></ticket-card>`;
                     });
                     listEl.innerHTML = html;
 
@@ -1782,10 +1787,35 @@
             if (resumenBox && resumenLista) {
                 if (mySeatsCount > 0) {
                     resumenBox.style.display = "block";
-                    const formattedSummary = textoReservasFormateado
-                        .replace(/\*/g, "") // quitar negritas de whatsapp
-                        .replace(/\n/g, "<br>");
-                    resumenLista.innerHTML = formattedSummary;
+                    resumenLista.innerHTML = "";
+                    
+                    mySeats.forEach(seat => {
+                        let fila, butaca;
+                        const ASIENTOS_POR_FILA = 20;
+
+                        if (seat.seat_number <= 220) {
+                            const mitad = ASIENTOS_POR_FILA / 2;
+                            fila = Math.ceil(seat.seat_number / ASIENTOS_POR_FILA);
+                            const posInRow = (seat.seat_number - 1) % ASIENTOS_POR_FILA;
+
+                            // Izquierda pares descendentes, Derecha impares ascendentes
+                            butaca = posInRow < mitad
+                                ? (mitad - posInRow) * 2
+                                : ((posInRow - mitad) * 2) + 1;
+                        } else {
+                            // Tratamiento Fila 12 Invertida
+                            fila = 12;
+                            const fila12Nums = [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23];
+                            butaca = fila12Nums[seat.seat_number - 221];
+                        }
+                        
+                        const ticketCard = document.createElement("ticket-card");
+                        ticketCard.setAttribute("user-id", clientId);
+                        ticketCard.setAttribute("session-time", seat.session_time);
+                        ticketCard.setAttribute("fila", fila);
+                        ticketCard.setAttribute("butaca", butaca);
+                        resumenLista.appendChild(ticketCard);
+                    });
                     
                     const qrContainer = document.getElementById("qrcode-container");
                     const qrcodeEl = document.getElementById("qrcode");
@@ -2100,12 +2130,12 @@
             // Pantalla de agradecimiento
             let summaryHtml = "";
             if (textoReservasFormateado) {
-                const formattedSummary = textoReservasFormateado
-                    .replace(/\*/g, "") // quitar negritas de markdown para whatsapp
-                    .replace(/\n/g, "<br>");
+                const listEl = document.getElementById("resumen-reservas-lista");
+                const cardsHtml = listEl ? listEl.innerHTML : "";
+                
                 summaryHtml = `
-                    <div style="text-align: left; margin: 1.5rem 0; padding: 1.2rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 0.9rem; max-height: 180px; overflow-y: auto; color: #e2e8f0; line-height: 1.5;">
-                        ${formattedSummary}
+                    <div style="margin: 1.5rem 0; max-height: 320px; overflow-y: auto; padding-right: 5px;">
+                        ${cardsHtml}
                     </div>
                     <div style="display: flex; gap: 8px; flex-direction: column; margin-bottom: 1.5rem; width: 100%;">
                         <button onclick="copiarReservas()"
@@ -2121,7 +2151,7 @@
             }
 
             document.getElementById("app-screen").innerHTML = `
-                <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 400px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
+                <div style="text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; max-width: 500px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.5); color: white;">
                     <h2 style="color: #22c55e; margin-top: 0;">✅ ¡Reserva Guardada!</h2>
                     <p>Tus butacas han quedado registradas correctamente en el sistema.</p>
                     ${summaryHtml}
