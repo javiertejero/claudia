@@ -32,6 +32,7 @@ En la cabecera del panel dispones de las siguientes herramientas:
 
 ### 4. Gestión de Combinaciones y Cuotas 📋
 Al activar el botón **Combinaciones**, se despliega la base de datos de usuarios autorizados:
+
 * **Buscador**: Filtra por el nombre del animal o adjetivo.
 * **Ajuste de Cuotas**: Cada usuario tiene asignada una cuota de butacas reservables (ej. 6). Puedes aumentarla o disminuirla en caliente haciendo clic en los botones `+` o `−`.
 * **Compartir Credenciales (WhatsApp)**: Cada fila incluye un botón verde con el logotipo de WhatsApp. Al pulsarlo, abre un mensaje con el enlace de auto-login pre-rellenado para que puedas enviárselo directamente al usuario por chat:
