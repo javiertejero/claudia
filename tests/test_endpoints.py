@@ -44,12 +44,23 @@ def test_admin_combinations_returns_app_url():
         state.VALID_COMBINATIONS.discard("tigresa_valiente")
 
 
-def test_thanks_endpoint_returns_agradecimientos_html():
+def test_thanks_endpoint_returns_thanks_html():
     client = TestClient(app)
     response = client.get("/thanks")
     assert response.status_code == 200
-    assert "Agradecimientos" in response.text
+    assert "star_wars_theme.mp3" in response.text
     # Test with trailing slash as well
     response_slash = client.get("/thanks/")
     assert response_slash.status_code == 200
-    assert "Agradecimientos" in response_slash.text
+    assert "star_wars_theme.mp3" in response_slash.text
+
+
+def test_gracias_endpoint_returns_agradecimientos_html():
+    client = TestClient(app)
+    response = client.get("/gracias")
+    assert response.status_code == 200
+    assert "valse_gymnopedie.mp3" in response.text
+    # Test with trailing slash as well
+    response_slash = client.get("/gracias/")
+    assert response_slash.status_code == 200
+    assert "valse_gymnopedie.mp3" in response_slash.text

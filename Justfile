@@ -1,5 +1,6 @@
 download_music:
-    @[ -f static/valse_gymnopedie.mp3 ] || curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3"
+	@[ -f static/valse_gymnopedie.mp3 ] || curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3"
+	@[ -f static/star_wars_theme.mp3 ] || curl -L -o static/star_wars_theme.mp3 "https://s.cdpn.io/1202/Star_Wars_original_opening_crawl_1977.mp3"
 
 launch: download_music
     uv run --frozen --env-file .env fastapi run main.py

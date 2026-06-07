@@ -357,6 +357,12 @@ async def get_transfer_page():
 @app.get("/thanks")
 @app.get("/thanks/")
 async def get_thanks_page():
+    return FileResponse("thanks.html")
+
+
+@app.get("/gracias")
+@app.get("/gracias/")
+async def get_gracias_page():
     return FileResponse("agradecimientos.html")
 
 

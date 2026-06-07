@@ -23,7 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Descargamos la música de agradecimientos en la carpeta static del contenedor
-RUN mkdir -p static && curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3"
+RUN mkdir -p static && \
+    curl -L -o static/valse_gymnopedie.mp3 "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Valse%20Gymnopedie.mp3" && \
+    curl -L -o static/star_wars_theme.mp3 "https://s.cdpn.io/1202/Star_Wars_original_opening_crawl_1977.mp3"
 
 # Instalamos las dependencias a nivel de sistema dentro del contenedor
 RUN uv pip install --system aiosqlite "fastapi[standard]" "md2pdf[cli]"
