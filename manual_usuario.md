@@ -17,6 +17,7 @@ Esta guía te ayudará a reservar tus asientos para el espectáculo de forma rá
 
 ### 3. Selección de Butacas 💺
 En el mapa interactivo verás la distribución de la sala:
+
 * ⬜ **Butacas en Blanco**: Disponibles. Haz clic sobre ellas para seleccionarlas.
 * 🟧 **Butacas en Naranja**: Tus butacas seleccionadas (en edición).
 * ⬛ **Butacas en Gris Oscuro**: Reservadas por otros usuarios (no seleccionables).
@@ -29,12 +30,14 @@ En el mapa interactivo verás la distribución de la sala:
 
 ### 5. Código de Acceso QR 🎫
 Una vez guardada la reserva con éxito, verás una tarjeta con:
+
 1. El listado de tus butacas reservadas (sesión, fila y número de asiento).
 2. Un **Código QR de Acceso**.
 3. **¡Importante!** Muestra este código QR en tu móvil al acomodador en la puerta del teatro para acceder a la sala.
 
 ### 6. Ceder/Transferir Butacas a Amigos 🔗
 Si tienes butacas de tu cuota que no vas a utilizar y quieres dárselas a otra persona:
+
 1. Pídele al destinatario que pulse en su pantalla el botón **🔗 Solicitar transferencia de cuota**.
 2. Te enviará un enlace (normalmente por WhatsApp).
 3. Abre ese enlace en tu móvil, introduce tu Animal y Adjetivo, e indica cuántas de tus butacas disponibles quieres cederle.
