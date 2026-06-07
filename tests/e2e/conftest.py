@@ -37,10 +37,12 @@ def test_server():
     orig_db = state.DB_FILE
     orig_max = state.MAX_ACTIVE_USERS
     orig_secret = state.ADMIN_SECRET
+    orig_disable_identity = state.DISABLE_IDENTITY_CHECKS
 
     state.DB_FILE = test_db
     state.MAX_ACTIVE_USERS = 5
     state.ADMIN_SECRET = "secretotestado"
+    state.DISABLE_IDENTITY_CHECKS = True
     state.VALID_COMBINATIONS.add("loba_astuta")
 
     # Bootstrap the DB
@@ -68,3 +70,4 @@ def test_server():
     state.MAX_ACTIVE_USERS = orig_max
     state.ADMIN_SECRET = orig_secret
     state.VALID_COMBINATIONS.discard("loba_astuta")
+    state.DISABLE_IDENTITY_CHECKS = orig_disable_identity

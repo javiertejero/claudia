@@ -21,9 +21,9 @@ def test_login_and_book_seat(page: Page, test_server: str):
     expect(page.locator("#app-screen")).to_be_visible()
 
     # Wait for websocket to connect and update the banner
-    # It should say "Estás eligiendo butacas" since MAX_ACTIVE_USERS=5
+    # It should say "Selecciona tus butacas." since MAX_ACTIVE_USERS=5
     banner = page.locator("#status-banner")
-    expect(banner).to_contain_text(re.compile(r"Estás eligiendo|en cola"))
+    expect(banner).to_contain_text(re.compile(r"Selecciona tus butacas.|en cola"))
 
     # Wait for the seats to load (there should be some free seats)
     free_seat = page.locator(".seat.free").first

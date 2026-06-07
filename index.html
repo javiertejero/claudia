@@ -193,6 +193,7 @@
                 transform: translateY(-20px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
@@ -203,12 +204,15 @@
             0% {
                 transform: rotate(0deg);
             }
+
             30% {
                 transform: rotate(90deg);
             }
+
             70% {
                 transform: rotate(90deg);
             }
+
             100% {
                 transform: rotate(0deg);
             }
@@ -770,7 +774,8 @@
         }
 
         .modal-content {
-            background: #18181b; /* zinc 900 */
+            background: #18181b;
+            /* zinc 900 */
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             width: 100%;
@@ -784,12 +789,20 @@
         }
 
         @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .modal-header {
-            background: #27272a; /* zinc 800 */
+            background: #27272a;
+            /* zinc 800 */
             padding: 16px 20px;
             display: flex;
             justify-content: space-between;
@@ -810,7 +823,8 @@
         .btn-close-modal {
             background: transparent;
             border: none;
-            color: #a1a1aa; /* zinc 400 */
+            color: #a1a1aa;
+            /* zinc 400 */
             font-size: 1.5rem;
             cursor: pointer;
             padding: 4px;
@@ -826,7 +840,8 @@
         .modal-body {
             padding: 24px 20px;
             overflow-y: auto;
-            color: #e2e8f0; /* slate 200 */
+            color: #e2e8f0;
+            /* slate 200 */
             text-align: left;
             font-size: 0.95rem;
             line-height: 1.6;
@@ -834,47 +849,62 @@
         }
 
         /* Formateo del Markdown inyectado en el modal */
-        .modal-body h1, .modal-body h2, .modal-body h3 {
+        .modal-body h1,
+        .modal-body h2,
+        .modal-body h3 {
             color: #ffffff;
             margin-top: 1.5rem;
             margin-bottom: 0.75rem;
             font-weight: 700;
         }
+
         .modal-body h1 {
             font-size: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             padding-bottom: 8px;
             margin-top: 0;
         }
+
         .modal-body h2 {
             font-size: 1.25rem;
-            color: #38bdf8; /* sky 400 */
+            color: #38bdf8;
+            /* sky 400 */
         }
+
         .modal-body h3 {
             font-size: 1.05rem;
-            color: #f59e0b; /* amber 500 */
+            color: #f59e0b;
+            /* amber 500 */
         }
+
         .modal-body p {
             margin-bottom: 1rem;
         }
-        .modal-body ul, .modal-body ol {
+
+        .modal-body ul,
+        .modal-body ol {
             margin-bottom: 1rem;
             padding-left: 20px;
         }
+
         .modal-body li {
             margin-bottom: 0.5rem;
         }
+
         .modal-body hr {
             border: 0;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             margin: 1.5rem 0;
         }
+
         .modal-body strong {
             color: #ffffff;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
     <!-- Librería para renderizar Markdown a HTML -->
@@ -921,11 +951,15 @@
         <input type="text" id="input-adjetivo" placeholder="Adjetivo" list="adjectives-list" required>
         <datalist id="adjectives-list"></datalist>
         <button class="btn-primary" onclick="iniciarApp()">Entrar a la sala</button>
-        <div style="margin-top: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;">
-            <button class="btn-secondary" onclick="abrirManualUsuario()" style="width: auto; padding: 6px 16px; margin: 0; background: rgba(255, 255, 255, 0.05); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.15); font-weight: 600;">
+        <div
+            style="margin-top: 1.5rem; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;">
+            <button class="btn-secondary" onclick="abrirManualUsuario()"
+                style="width: auto; padding: 6px 16px; margin: 0; background: rgba(255, 255, 255, 0.05); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.15); font-weight: 600;">
                 📖 Leer Guía de Reserva (Online)
             </button>
-            <a href="/static/manual_usuario.pdf" download style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; cursor: pointer;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#94a3b8'">
+            <a href="/static/manual_usuario.pdf" download
+                style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; cursor: pointer;"
+                onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#94a3b8'">
                 📥 Descargar en PDF
             </a>
         </div>
@@ -935,26 +969,14 @@
         <!-- Hint para rotar la pantalla en móviles en vertical -->
         <div id="rotate-device-hint" role="status">
             <span class="rotate-icon">📱</span>
-            <span style="flex: 1; text-align: left;">Recomendamos usar el móvil en horizontal para seleccionar tus butacas.</span>
-            <button onclick="document.getElementById('rotate-device-hint').style.setProperty('display', 'none', 'important')" style="background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; padding: 0 4px; line-height: 1; margin-left: 8px;">✕</button>
+            <span style="flex: 1; text-align: left;">Recomendamos usar el móvil en horizontal para seleccionar tus
+                butacas.</span>
+            <button
+                onclick="document.getElementById('rotate-device-hint').style.setProperty('display', 'none', 'important')"
+                style="background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; padding: 0 4px; line-height: 1; margin-left: 8px;">✕</button>
         </div>
         <h2>Espectáculo de Danza</h2>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
-
-        <!-- Tarjeta de Resumen de Reservas y Código QR -->
-        <div id="resumen-reservas-box" style="display:none; margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
-            <div id="qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto 1.5rem auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
-                <div id="qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
-                <div style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Código de Acceso</div>
-                <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta</div>
-            </div>
-
-            <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1.5rem;">
-                🎟️ Tus Butacas Reservadas
-            </h3>
-            
-            <div id="resumen-reservas-lista" style="display: flex; flex-direction: column; gap: 12px; text-align: left; width: 100%;"></div>
-        </div>
 
         <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
             <button id="btn-solicitar-transferencia" class="btn-secondary" onclick="solicitarTransferencia()"
@@ -964,22 +986,53 @@
         </div>
 
         <div id="sessions-container" style="display: none;"></div>
-        
-        <div style="margin: 2.5rem auto 1rem auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;">
-            <button class="btn-secondary" onclick="abrirManualUsuario()" style="width: auto; padding: 6px 16px; margin: 0; background: rgba(255, 255, 255, 0.05); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.15); font-weight: 600;">
+
+        <!-- Tarjeta de Resumen de Reservas y Código QR -->
+        <div id="resumen-reservas-box"
+            style="display:none; margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <div id="qrcode-container"
+                style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto 1.5rem auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+                <div id="qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
+                <div
+                    style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+                    Código de Acceso</div>
+                <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta
+                </div>
+            </div>
+
+            <h3
+                style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1.5rem;">
+                🎟️ Tus Butacas Reservadas
+            </h3>
+
+            <div id="resumen-reservas-lista"
+                style="display: flex; flex-direction: column; gap: 12px; text-align: left; width: 100%;"></div>
+        </div>
+
+        <div
+            style="margin: 2.5rem auto 1rem auto; text-align: center; max-width: 500px; display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center;">
+            <button class="btn-secondary" onclick="abrirManualUsuario()"
+                style="width: auto; padding: 6px 16px; margin: 0; background: rgba(255, 255, 255, 0.05); color: #f1f5f9; border-color: rgba(255, 255, 255, 0.15); font-weight: 600;">
                 📖 Leer Guía de Reserva (Online)
             </button>
-            <a href="/static/manual_usuario.pdf" download style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; cursor: pointer;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#94a3b8'">
+            <a href="/static/manual_usuario.pdf" download
+                style="color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; cursor: pointer;"
+                onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#94a3b8'">
                 📥 Descargar en PDF
             </a>
         </div>
     </div>
 
-    <footer style="margin: 3rem auto 1.5rem auto; text-align: center; font-size: 0.85rem; color: #94a3b8; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; max-width: 400px; clear: both;">
+    <footer
+        style="margin: 3rem auto 1.5rem auto; text-align: center; font-size: 0.85rem; color: #94a3b8; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; max-width: 400px; clear: both;">
         <span style="opacity: 0.3;">—</span>
-        <a href="/thanks" style="color: #38bdf8; text-decoration: none; font-weight: 500; transition: color 0.15s;" onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#38bdf8'">Agradecimientos</a>
+        <a href="/thanks" style="color: #38bdf8; text-decoration: none; font-weight: 500; transition: color 0.15s;"
+            onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#38bdf8'">Agradecimientos</a>
         <span style="opacity: 0.3;">—</span>
-        <a href="/legal" target="_blank" style="color: #38bdf8; text-decoration: none; font-weight: 500; transition: color 0.15s;" onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#38bdf8'">Aviso Legal y Privacidad</a>
+        <a href="/legal" target="_blank"
+            style="color: #38bdf8; text-decoration: none; font-weight: 500; transition: color 0.15s;"
+            onmouseover="this.style.color='#60a5fa'" onmouseout="this.style.color='#38bdf8'">Aviso Legal y
+            Privacidad</a>
         <span style="opacity: 0.3;">—</span>
     </footer>
 
@@ -1348,7 +1401,7 @@
         async function mostrarSoloQR(animal, adjetivo) {
             clientId = `${animal.toLowerCase()}_${adjetivo.toLowerCase()}`;
             const container = document.getElementById("app-screen");
-            
+
             // Mostrar botón para cambiar de identidad
             const btnCambiar = document.getElementById('btn-cambiar-identidad');
             if (btnCambiar) btnCambiar.style.display = 'block';
@@ -1386,7 +1439,7 @@
                 }
                 const data = await res.json();
                 const seats = data.seats || [];
-                
+
                 const listEl = document.getElementById("dia-reservas-lista");
                 if (seats.length === 0) {
                     listEl.innerHTML = `
@@ -1515,7 +1568,7 @@
                         banner.className = "active";
 
                         if (userQuota === 0) {
-                            banner.innerHTML = '❌ No tienes asientos asignados en este sorteo.';
+                            banner.innerHTML = '❌ No tienes asientos asignados.';
                             banner.className = 'active';
                             document.getElementById('seat-counter').style.display = 'none';
                         } else {
@@ -1799,7 +1852,7 @@
                 if (mySeatsCount > 0) {
                     resumenBox.style.display = "block";
                     resumenLista.innerHTML = "";
-                    
+
                     mySeats.forEach(seat => {
                         let fila, butaca;
                         const ASIENTOS_POR_FILA = 20;
@@ -1819,7 +1872,7 @@
                             const fila12Nums = [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23];
                             butaca = fila12Nums[seat.seat_number - 221];
                         }
-                        
+
                         const ticketCard = document.createElement("ticket-card");
                         ticketCard.setAttribute("user-id", clientId);
                         ticketCard.setAttribute("session-time", seat.session_time);
@@ -1827,7 +1880,7 @@
                         ticketCard.setAttribute("butaca", butaca);
                         resumenLista.appendChild(ticketCard);
                     });
-                    
+
                     const qrContainer = document.getElementById("qrcode-container");
                     const qrcodeEl = document.getElementById("qrcode");
                     if (qrContainer && qrcodeEl) {
@@ -1840,7 +1893,7 @@
                             const pathSafeAnimal = encodeURIComponent(animal.toLowerCase());
                             const pathSafeAdjetivo = encodeURIComponent(adjetivo.toLowerCase());
                             const qrUrl = `${appUrl}/check/${pathSafeAnimal}/${pathSafeAdjetivo}`;
-                            
+
                             if (typeof QRCode !== 'undefined') {
                                 new QRCode(qrcodeEl, {
                                     text: qrUrl,
@@ -2143,7 +2196,7 @@
             if (textoReservasFormateado) {
                 const listEl = document.getElementById("resumen-reservas-lista");
                 const cardsHtml = listEl ? listEl.innerHTML : "";
-                
+
                 summaryHtml = `
                     <div style="margin: 1.5rem 0; max-height: 320px; overflow-y: auto; padding-right: 5px;">
                         ${cardsHtml}
@@ -2182,15 +2235,15 @@
         async function abrirManualUsuario() {
             const modal = document.getElementById("manual-modal");
             const modalBody = document.getElementById("manual-modal-body");
-            
+
             modal.style.display = "flex";
             document.body.style.overflow = "hidden"; // Evita scroll en la página de fondo
-            
+
             try {
                 const res = await fetch("/static/manual_usuario.md");
                 if (!res.ok) throw new Error("No se pudo cargar el archivo");
                 const markdownText = await res.text();
-                
+
                 if (typeof marked !== 'undefined') {
                     modalBody.innerHTML = marked.parse(markdownText);
                 } else {
@@ -2237,7 +2290,9 @@
             </div>
             <div id="manual-modal-body" class="modal-body">
                 <div style="display: flex; align-items: center; justify-content: center; padding: 2rem;">
-                    <div style="border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: #38bdf8; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.8s linear infinite; margin-right: 12px;"></div>
+                    <div
+                        style="border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: #38bdf8; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.8s linear infinite; margin-right: 12px;">
+                    </div>
                     <span>Cargando manual...</span>
                 </div>
             </div>
@@ -2246,4 +2301,5 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
+
 </html>
