@@ -149,6 +149,19 @@
             margin-bottom: 2rem;
             border-radius: 8px;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        #timer-display {
+            float: none !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            margin-left: 8px !important;
         }
 
         .queued {
@@ -926,7 +939,7 @@
 
             // Guardamos el timer-display actual si existe
             const display = document.getElementById("timer-display");
-            const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+            const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
 
             function actualizarBannerConCountdown() {
                 banner.className = "auto-saving";
@@ -977,7 +990,7 @@
                 banner.className = "active";
                 banner.style.background = ""; // Restaurar color original del CSS (.active)
                 const display = document.getElementById("timer-display");
-                const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+                const timerHtml = display ? display.outerHTML : `<span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
                 banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. ${timerHtml}`;
             }
         }
@@ -1138,7 +1151,7 @@
                         } else {
                             if (!yaEstabaActivo) {
                                 // Inyectamos el reloj visualmente en el banner
-                                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+                                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">⏱️ --:--</span>`;
                                 document.getElementById("sessions-container").style.display = "block";
                                 document.getElementById("seat-counter").style.display = "block";
                             }
