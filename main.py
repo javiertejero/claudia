@@ -385,7 +385,159 @@ async def get_config():
         "animals": identity.ANIMALS,
         "adjectives": identity.ADJECTIVES,
         "app_url": state.APP_URL,
+        "taquilla_mode": state.TAQUILLA_MODE,
     }
+
+
+@app.get("/check")
+@app.get("/check/")
+@app.get("/check/{animal}/{adjetivo}")
+async def get_check_page(animal: str | None = None, adjetivo: str | None = None):
+    return FileResponse("check.html")
+
+
+@app.get("/api/check/info")
+async def get_check_info(animal: str = "", adjetivo: str = "", token: str = ""):
+    if token != state.ADMIN_SECRET:
+        return JSONResponse(
+            {"error": "No autorizado (Token incorrecto o ausente)"}, status_code=401
+        )
+
+    import math
+
+    from identity import normalize_combination
+
+    normalized = normalize_combination(f"{animal}_{adjetivo}")
+
+    if normalized not in state.VALID_COMBINATIONS:
+        return JSONResponse(
+            {
+                "valid": False,
+                "reason": "La combinación de Animal y Adjetivo no existe o no es válida.",
+            }
+        )
+
+    seats_list = []
+    already_used_recently = False
+    recently_used_time = 0.0
+
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT seat_number, session_time, used_at FROM seats WHERE owner_id = ? AND status = 'reserved'",
+            (normalized,),
+        ) as cursor:
+            rows = await cursor.fetchall()
+            for r in rows:
+                seat_num = r["seat_number"]
+                sess = r["session_time"]
+                used_at = r["used_at"]
+
+                # Lógica física de butacas
+                if seat_num <= 220:
+                    fila = math.ceil(seat_num / state.ASIENTOS_POR_FILA)
+                    pos_in_row = (seat_num - 1) % state.ASIENTOS_POR_FILA
+                    mitad = state.ASIENTOS_POR_FILA // 2
+                    if pos_in_row < mitad:
+                        butaca = (mitad - pos_in_row) * 2
+                    else:
+                        butaca = ((pos_in_row - mitad) * 2) + 1
+                else:
+                    fila = 12
+                    fila12_nums = [
+                        22,
+                        20,
+                        18,
+                        16,
+                        14,
+                        12,
+                        10,
+                        8,
+                        6,
+                        4,
+                        2,
+                        1,
+                        3,
+                        5,
+                        7,
+                        9,
+                        11,
+                        13,
+                        15,
+                        17,
+                        19,
+                        21,
+                        23,
+                    ]
+                    butaca = fila12_nums[seat_num - 221]
+
+                seats_list.append(
+                    {
+                        "seat_number": seat_num,
+                        "session_time": sess,
+                        "fila": fila,
+                        "butaca": butaca,
+                        "used_at": used_at,
+                    }
+                )
+
+                if used_at is not None:
+                    time_diff = time.time() - used_at
+                    if time_diff < 900:  # 15 minutos
+                        already_used_recently = True
+                        if used_at > recently_used_time:
+                            recently_used_time = used_at
+
+    # Ordenar por fila y luego por seat_number (orden físico de izquierda a derecha)
+    seats_list.sort(key=lambda x: (x["fila"], x["seat_number"]))
+
+    if not seats_list:
+        return JSONResponse(
+            {
+                "valid": False,
+                "reason": "La combinación existe pero no tiene ninguna butaca reservada.",
+            }
+        )
+
+    return {
+        "valid": True,
+        "user_id": normalized,
+        "seats": seats_list,
+        "already_used_recently": already_used_recently,
+        "recently_used_time": recently_used_time,
+        "server_time": time.time(),
+    }
+
+
+@app.post("/api/check/use")
+async def mark_seats_as_used(request: Request):
+    body = await request.json()
+    animal = body.get("animal", "")
+    adjetivo = body.get("adjetivo", "")
+    token = body.get("token", "")
+
+    if token != state.ADMIN_SECRET:
+        return JSONResponse(
+            {"error": "No autorizado (Token incorrecto o ausente)"}, status_code=401
+        )
+
+    from identity import normalize_combination
+
+    normalized = normalize_combination(f"{animal}_{adjetivo}")
+
+    if normalized not in state.VALID_COMBINATIONS:
+        return JSONResponse({"error": "Identidad inválida"}, status_code=404)
+
+    now = time.time()
+    async with aiosqlite.connect(state.DB_FILE) as db:
+        cursor = await db.execute(
+            "UPDATE seats SET used_at = ? WHERE owner_id = ? AND status = 'reserved'",
+            (now, normalized),
+        )
+        marked_count = cursor.rowcount
+        await db.commit()
+
+    return {"ok": True, "marked_count": marked_count, "used_at": now}
 
 
 @app.get("/api/mi-hash")

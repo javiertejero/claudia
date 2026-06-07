@@ -801,6 +801,21 @@
         </div>
         <h2>Espectáculo de Danza</h2>
         <div id="status-banner" class="queued">Conectando al servidor...</div>
+
+        <!-- Tarjeta de Resumen de Reservas y Código QR -->
+        <div id="resumen-reservas-box" style="display:none; margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
+            <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 1rem;">
+                🎟️ Tus Butacas Reservadas
+            </h3>
+            <div id="resumen-reservas-lista" style="color: #f1f5f9; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: left; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;"></div>
+            
+            <div id="qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+                <div id="qrcode" style="margin-bottom: 0.75rem; display: flex; justify-content: center;"></div>
+                <div style="color: #0f172a; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Código de Acceso</div>
+                <div style="color: #64748b; font-size: 0.7rem; margin-top: 2px;">Muéstralo al acomodador en la puerta</div>
+            </div>
+        </div>
+
         <div id="transfer-request-container" style="display:none; margin-top: 1rem;">
             <button id="btn-solicitar-transferencia" class="btn-secondary" onclick="solicitarTransferencia()"
                 style="background: #f0fdf4; color: #166534; border-color: #86efac;">
@@ -830,6 +845,7 @@
 
     <script>
         let appUrl = 'https://claudia.fly.dev';
+        let taquillaModeActivo = false;
 
         // 1. Detección del Modo Dios
         const urlParams = new URLSearchParams(window.location.search);
@@ -897,6 +913,9 @@
                 .then(data => {
                     if (data.app_url) {
                         appUrl = data.app_url;
+                    }
+                    if (data.taquilla_mode !== undefined) {
+                        taquillaModeActivo = data.taquilla_mode;
                     }
                     const animalsList = document.getElementById("animals-list");
                     const adjectivesList = document.getElementById("adjectives-list");
@@ -1214,6 +1233,9 @@
                 const data = JSON.parse(event.data);
 
                 if (data.type === "status") {
+                    if (data.taquilla_mode !== undefined) {
+                        taquillaModeActivo = data.taquilla_mode;
+                    }
                     if (data.status === "queued") {
                         const pos = data.position;
                         actualizarBannerCola(pos);
@@ -1512,6 +1534,51 @@
             } else {
                 // TODO: When 0 we should enable at least the guardar reserva
                 textoReservasFormateado = "";
+            }
+
+            // Actualizar panel de resumen persistente y QR
+            const resumenBox = document.getElementById("resumen-reservas-box");
+            const resumenLista = document.getElementById("resumen-reservas-lista");
+            if (resumenBox && resumenLista) {
+                if (mySeatsCount > 0) {
+                    resumenBox.style.display = "block";
+                    const formattedSummary = textoReservasFormateado
+                        .replace(/\*/g, "") // quitar negritas de whatsapp
+                        .replace(/\n/g, "<br>");
+                    resumenLista.innerHTML = formattedSummary;
+                    
+                    const qrContainer = document.getElementById("qrcode-container");
+                    const qrcodeEl = document.getElementById("qrcode");
+                    if (qrContainer && qrcodeEl) {
+                        if (taquillaModeActivo) {
+                            qrContainer.style.display = "block";
+                            qrcodeEl.innerHTML = "";
+                            const parts = clientId.split('_');
+                            const animal = parts[0] || "";
+                            const adjetivo = parts[1] || "";
+                            const pathSafeAnimal = encodeURIComponent(animal.toLowerCase());
+                            const pathSafeAdjetivo = encodeURIComponent(adjetivo.toLowerCase());
+                            const qrUrl = `${appUrl}/check/${pathSafeAnimal}/${pathSafeAdjetivo}`;
+                            
+                            if (typeof QRCode !== 'undefined') {
+                                new QRCode(qrcodeEl, {
+                                    text: qrUrl,
+                                    width: 140,
+                                    height: 140,
+                                    colorDark: "#0f172a",
+                                    colorLight: "#ffffff",
+                                    correctLevel: QRCode.CorrectLevel.M
+                                });
+                            } else {
+                                qrcodeEl.innerText = "QR: " + qrUrl;
+                            }
+                        } else {
+                            qrContainer.style.display = "none";
+                        }
+                    }
+                } else {
+                    resumenBox.style.display = "none";
+                }
             }
 
             // 3. ACTUALIZAR CONTADOR VISUAL
@@ -1830,6 +1897,7 @@
             }
         }, 10000);
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 
 </html>

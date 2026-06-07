@@ -59,6 +59,16 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                         )
                         await save_state_to_db("MAX_ACTIVE_USERS", value)
                         await broadcast_admin_stats()
+                if payload.get("action") == "set_taquilla_mode":
+                    value = payload.get("value")
+                    if isinstance(value, bool):
+                        state.TAQUILLA_MODE = value
+                        logger.info(
+                            "TAQUILLA_MODE actualizado a %s por el administrador.",
+                            value,
+                        )
+                        await save_state_to_db("taquilla_mode", 1 if value else 0)
+                        await broadcast_admin_stats()
                 if payload.get("action") == "reset_db":
                     logger.warning(
                         "El administrador ha solicitado el RESETEO TOTAL de la base de datos."

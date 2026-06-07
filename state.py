@@ -24,6 +24,7 @@ logger.debug("Admin secret: visit http://127.0.0.1:8000/admin/%s", ADMIN_SECRET)
 admin_connections = set()
 
 APP_URL = os.getenv("APP_URL", "https://claudia.fly.dev")
+TAQUILLA_MODE = False
 
 
 SYSTEM_SEED = None

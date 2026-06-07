@@ -25,9 +25,17 @@ async def init_db():
                 session_time TEXT,
                 status TEXT DEFAULT 'free',
                 owner_id TEXT,
-                owner_name TEXT
+                owner_name TEXT,
+                used_at REAL
             )
         """)
+        # Migración de la tabla seats para incluir used_at
+        async with db.execute("PRAGMA table_info(seats)") as cursor:
+            columns = [r[1] for r in await cursor.fetchall()]
+        if "used_at" not in columns:
+            await db.execute("ALTER TABLE seats ADD COLUMN used_at REAL")
+            await db.commit()
+            logger.info("Columna used_at añadida a la tabla seats.")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS queue (
                 client_id TEXT PRIMARY KEY,
@@ -102,6 +110,22 @@ async def init_db():
             else:
                 state.MAX_ACTIVE_USERS = int(row[0])
                 logger.info("MAX_ACTIVE_USERS cargado con éxito desde base de datos.")
+
+        # Cargar o generar taquilla_mode persistido en la base de datos
+        async with db.execute(
+            "SELECT value FROM settings WHERE key = 'taquilla_mode'"
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                state.TAQUILLA_MODE = False
+                await db.execute(
+                    "INSERT INTO settings (key, value) VALUES ('taquilla_mode', '0')"
+                )
+                await db.commit()
+                logger.info("taquilla_mode inicializado en 0 (Desactivado).")
+            else:
+                state.TAQUILLA_MODE = row[0] == "1"
+                logger.info(f"taquilla_mode cargado con éxito: {state.TAQUILLA_MODE}")
 
         # Generar las combinaciones de usuarios válidas deterministamente usando la semilla
         state.VALID_COMBINATIONS = generate_valid_combinations(

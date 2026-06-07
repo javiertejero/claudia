@@ -87,6 +87,7 @@ async def broadcast_admin_stats():
                 "max_active_users": state.MAX_ACTIVE_USERS,
                 "active_users_list": active_users_list,
                 "queued_users_list": queued_users_list,
+                "taquilla_mode": state.TAQUILLA_MODE,
             }
         )
         for admin_ws in list(state.admin_connections):
