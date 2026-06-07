@@ -16,7 +16,9 @@ TOTAL_CUOTAS = (
 
 
 async def init_db():
-    os.makedirs(os.path.dirname(state.DB_FILE), exist_ok=True)
+    db_dir = os.path.dirname(state.DB_FILE)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     async with aiosqlite.connect(state.DB_FILE) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS seats (

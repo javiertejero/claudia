@@ -156,23 +156,28 @@ async def cleanup_waiting_queue():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Capture Uvicorn's original signal handlers
-    original_sigint = signal.getsignal(signal.SIGINT)
-    original_sigterm = signal.getsignal(signal.SIGTERM)
+    try:
+        original_sigint = signal.getsignal(signal.SIGINT)
+        original_sigterm = signal.getsignal(signal.SIGTERM)
 
-    def shutdown_interceptor(signum, frame):
-        # 2. Flip our flag IMMEDIATELY upon receiving the signal
-        state.IS_SHUTTING_DOWN = True
-        print(f"\n[Interceptor] Signal {signum} caught! Flag flipped.")
+        def shutdown_interceptor(signum, frame):
+            # 2. Flip our flag IMMEDIATELY upon receiving the signal
+            state.IS_SHUTTING_DOWN = True
+            print(f"\n[Interceptor] Signal {signum} caught! Flag flipped.")
 
-        # 3. Hand control back to Uvicorn so it can gracefully close connections
-        if signum == signal.SIGINT and callable(original_sigint):
-            original_sigint(signum, frame)
-        elif signum == signal.SIGTERM and callable(original_sigterm):
-            original_sigterm(signum, frame)
+            # 3. Hand control back to Uvicorn so it can gracefully close connections
+            if signum == signal.SIGINT and callable(original_sigint):
+                original_sigint(signum, frame)
+            elif signum == signal.SIGTERM and callable(original_sigterm):
+                original_sigterm(signum, frame)
 
-    # 4. Override the signals with our interceptor
-    signal.signal(signal.SIGINT, shutdown_interceptor)
-    signal.signal(signal.SIGTERM, shutdown_interceptor)
+        # 4. Override the signals with our interceptor
+        signal.signal(signal.SIGINT, shutdown_interceptor)
+        signal.signal(signal.SIGTERM, shutdown_interceptor)
+    except ValueError:
+        logger.warning(
+            "No se pudieron registrar las señales (probablemente ejecutando en un thread de test)."
+        )
 
     await bootstrap_db.init_db()
     # Iniciar la tarea de limpieza en segundo plano
