@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviso Legal y Privacidad</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon-32x32.png" type="image/png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #000;
+            color: #f1f5f9;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            text-align: left;
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+        }
+        
+        h1:first-child {
+            margin-top: 0;
+        }
+
+        h2 {
+            color: #e60000;
+            font-size: 1.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        p, ul {
+            font-size: 1rem;
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        strong {
+            color: #f1f5f9;
+        }
+
+        a.back-btn {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.15s;
+        }
+
+        a.back-btn:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+            .container {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="/" class="back-btn">&larr; Volver a la página principal</a>
+
+        <h1>Aviso Legal y Condiciones de Uso</h1>
+
+        <h2>1. Información General</h2>
+        <p>En cumplimiento de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa que este sitio web es gestionado de forma altruista y sin ánimo de lucro por:</p>
+        <ul>
+            <li><strong>Titular:</strong> L'Ateneu Torrellenc</li>
+            <li><strong>NIF:</strong> [NIF_DEL_ATENEU_A_RELLENAR]</li>
+            <li><strong>Dirección:</strong> Carrer Major, 2, 08629 Torrelles de Llobregat, Barcelona.</li>
+            <li><strong>Actividad:</strong> Sistema de reservas para "Torrelles en dansa"</li>
+        </ul>
+
+        <h2>2. Condiciones de Uso y Naturaleza del Servicio</h2>
+        <p>Este sitio web tiene como único propósito facilitar la reserva de butacas para el evento "Torrelles en dansa". El uso de la plataforma es totalmente gratuito.</p>
+        <p>Es importante destacar que a través de este sitio <strong>no se realiza ninguna transacción económica</strong>. La asignación de la butaca se realiza a coste cero, y cualquier aportación económica o pago de entrada simbólico se efectuará físicamente y en metálico el día del evento, fuera del alcance de esta plataforma.</p>
+
+        <h2>3. Propiedad Intelectual y Exención de Responsabilidad (Licencia MIT)</h2>
+        <p>El código fuente de este sistema de reservas es de código abierto y se distribuye bajo la <strong>Licencia MIT</strong>.</p>
+        <p>El software se proporciona "tal cual" (as is), sin garantía de ningún tipo, expresa o implícita, incluyendo pero no limitándose a garantías de comercialización, idoneidad para un propósito particular y no infracción. En ningún caso los autores, desarrolladores o L'Ateneu Torrellenc serán responsables por ninguna reclamación, daño u otra responsabilidad, ya sea en una acción de contrato, agravio o cualquier otro motivo, que surja de, o en conexión con el software o el uso u otro tipo de acciones en el software.</p>
+
+        <h1>Política de Privacidad</h1>
+
+        <h2>1. Privacidad desde el Diseño (Zero Data)</h2>
+        <p>El compromiso de L'Ateneu Torrellenc con la privacidad de los usuarios es absoluto. Este sistema de reservas ha sido diseñado bajo la premisa de "Zero Data" (Cero Datos):</p>
+        <ul>
+            <li><strong>No existe registro de usuarios:</strong> El acceso al sistema para gestionar la reserva se realiza exclusivamente mediante la validación en el servidor de datos previamente establecidos.</li>
+            <li><strong>No almacenamos información personal:</strong> No se guarda ningún dato personal, Identificador de Información Personal (PII), nombre, correo electrónico o identificador del usuario en nuestra base de datos.</li>
+            <li><strong>Validación del lado del servidor:</strong> Toda comprobación para el acceso a la cola de reservas se efectúa internamente en nuestros servidores sin exponer datos.</li>
+        </ul>
+
+        <h2>2. Seguridad y Protección contra Abusos (Throttling)</h2>
+        <p>Para garantizar la disponibilidad del sistema y evitar ataques automatizados o abusos en los intentos de acceso, hemos implementado una medida de seguridad temporal:</p>
+        <ul>
+            <li>Si se detecta un error de validación al intentar acceder, el sistema bloqueará temporalmente (durante 1 minuto) las peticiones procedentes de esa dirección IP.</li>
+            <li>Para poder gestionar este bloqueo temporal, <strong>la dirección IP del usuario se almacena únicamente en la memoria volátil (RAM)</strong> del servidor web.</li>
+            <li><strong>Destrucción de datos:</strong> Esta dirección IP se destruye automáticamente pasados unos minutos. No existe, en ningún caso, un registro histórico, persistente o permanente de direcciones IP ni archivos de actividad (logs de IPs).</li>
+        </ul>
+
+        <h2>3. Derechos de los Usuarios</h2>
+        <p>Dado que la plataforma no recaba, almacena, ni procesa datos de carácter personal de forma persistente, el ejercicio tradicional de derechos de acceso, rectificación, supresión, limitación, portabilidad y oposición (derechos ARCO/RGPD) decae por la propia inexistencia de datos vinculados al usuario en nuestros sistemas. Para cualquier duda o consulta general, puede dirigirse a la sede física de L'Ateneu Torrellenc.</p>
+
+        <h1>Política de Cookies</h1>
+
+        <h2>1. ¿Qué son las cookies?</h2>
+        <p>Las cookies son pequeños archivos de texto que se descargan en el dispositivo del usuario al acceder a determinadas páginas web, permitiendo almacenar y recuperar información sobre la navegación.</p>
+
+        <h2>2. Cookies que utilizamos</h2>
+        <p>Esta plataforma web <strong>NO utiliza cookies propias, ni cookies de terceros para análisis, rastreo, publicidad o marketing</strong> (como Google Analytics, píxeles de Meta, etc.).</p>
+        <p>Las únicas cookies que el usuario puede recibir durante la navegación en esta web son <strong>estrictamente técnicas y de sesión</strong>, inyectadas de manera automática por la infraestructura de nuestro proveedor de alojamiento (Fly.io) o por intermediarios de red esenciales para el funcionamiento de la web.</p>
+        <p>La finalidad de estas cookies técnicas es exclusivamente:</p>
+        <ul>
+            <li>Garantizar el correcto enrutamiento del tráfico de red.</li>
+            <li>Gestionar el balanceo de carga para las conexiones en tiempo real (WebSockets).</li>
+            <li>Mantener la integridad y seguridad de las sesiones de comunicación entre el servidor y el navegador del usuario.</li>
+        </ul>
+
+        <h2>3. Consentimiento</h2>
+        <p>De acuerdo con la normativa vigente (Ley 34/2002 - LSSI), este tipo de cookies de carácter estrictamente técnico necesarias para proveer el servicio solicitado por el usuario <strong>están exentas de la obligación de obtener el consentimiento previo</strong>. Se informa de su existencia por un principio de transparencia y buenas prácticas.</p>
+
+        <h2>4. Gestión de Cookies</h2>
+        <p>Aunque estas cookies son esenciales para el funcionamiento técnico de la reserva y los WebSockets, el usuario puede configurar su navegador en cualquier momento para bloquear o eliminar las cookies. Sin embargo, advertimos de que deshabilitar estas cookies técnicas puede provocar que la web no funcione correctamente y no sea posible realizar la reserva de butacas.</p>
+    </div>
+
+</body>
+</html>

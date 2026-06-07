@@ -366,6 +366,12 @@ async def get_gracias_page():
     return FileResponse("agradecimientos.html")
 
 
+@app.get("/legal")
+@app.get("/legal/")
+async def get_legal_page():
+    return FileResponse("legal.html")
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse("static/favicon.ico")
