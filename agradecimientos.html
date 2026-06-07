@@ -98,14 +98,17 @@
                 font-size: 1.3rem;
                 letter-spacing: 1px;
             }
+
             h1 {
                 font-size: 2rem;
                 margin-bottom: 2rem;
                 letter-spacing: 3px;
             }
+
             p {
                 margin-bottom: 1.8rem;
             }
+
             .firma {
                 font-size: 1rem;
                 margin-top: 3rem;
@@ -117,12 +120,18 @@
 <body>
 
     <!-- Botón para volver a la página principal -->
-    <a href="/" style="position: absolute; top: 20px; left: 20px; z-index: 100; color: #feda4a; text-decoration: none; font-size: 1.1rem; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); transition: all 0.2s ease-in-out; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
+    <a href="/"
+        style="position: absolute; top: 20px; left: 20px; z-index: 100; color: #feda4a; text-decoration: none; font-size: 1.1rem; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); transition: all 0.2s ease-in-out; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px;"
+        onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';"
+        onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
         ← Volver
     </a>
 
     <!-- Botón para controlar la música -->
-    <button id="btn-musica" onclick="toggleMusica()" style="position: absolute; top: 20px; right: 20px; z-index: 100; color: #feda4a; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out;" onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
+    <button id="btn-musica" onclick="toggleMusica()"
+        style="position: absolute; top: 20px; right: 20px; z-index: 100; color: #feda4a; border: 2px solid #feda4a; padding: 8px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.7); cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Century Gothic', CenturyGothic, Arial, sans-serif; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease-in-out;"
+        onmouseover="this.style.background='#feda4a'; this.style.color='#000'; this.style.transform='scale(1.05)';"
+        onmouseout="this.style.background='rgba(0, 0, 0, 0.7)'; this.style.color='#feda4a'; this.style.transform='scale(1)';">
         <span>🎵 Play Música</span>
     </button>
 
@@ -134,19 +143,35 @@
         <div class="crawl">
             <h1>Agradecimientos</h1>
 
-            <p>A Claudia, profesora de danza, por inspirar este proyecto.</p>
+            <p>
+                A Claudia, profesora de danza, por inspirar este proyecto.
+            </p>
 
-            <p>A Tamara, por sus ideas de diseño gráfico, inspirar funcionalidades y por ayudar activamente en las fases
-                de pruebas.</p>
+            <p>
+                A Tamara, por sus ideas de diseño gráfico, inspirar funcionalidades y por ayudar en las fases de
+                pruebas.
+            </p>
 
-            <p>A Javier Giménez, por sugerir las ideas originales que dieron inicio a esta aplicación.</p>
+            <p>
+                A Javier Giménez, por sugerir las ideas originales que dieron inicio a esta aplicación.
+            </p>
 
-            <p>A Adrià, por sus excelentes aportaciones a la usabilidad del sistema.</p>
+            <p>
+                A Adrià, por sus aportaciones a la usabilidad del sistema.
+            </p>
 
-            <p>A Natalia, por su infinita paciencia y apoyo constante.</p>
+            <p>
+                A Natalia, por su paciencia.
+            </p>
 
-            <p>Y por supuesto, a todas las madres y padres de los y las alumnas de danza, por su inmenso amor
-                a sus hijos y su valiosa contribución a la comunidad de Torrelles.</p>
+            <p>
+                Así mismo, a todas las madres y padres de los y las alumnas de danza, por su inmenso amor a sus
+                hijos y su valiosa contribución a la comunidad de Torrelles.
+            </p>
+
+            <p>
+                Especialmente dedicado a Iria y Siena.
+            </p>
 
             <p class="firma">Creado por: Javier Tejero</p>
         </div>
@@ -158,7 +183,7 @@
         function toggleMusica() {
             const btn = document.getElementById("btn-musica");
             const audio = document.getElementById("audio-agradecimientos");
-            
+
             if (isPlaying) {
                 audio.pause();
                 isPlaying = false;
