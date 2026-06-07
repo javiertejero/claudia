@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva de Butacas</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Permanent+Marker&display=swap');
 
@@ -334,9 +335,12 @@
         }
 
         .pasillo-step {
-            background: #18181b; /* zinc 900 */
-            border-top: 1px solid #3f3f46; /* zinc 700 - step nose highlight */
-            border-bottom: 2px solid #09090b; /* zinc 950 - shadow */
+            background: #18181b;
+            /* zinc 900 */
+            border-top: 1px solid #3f3f46;
+            /* zinc 700 - step nose highlight */
+            border-bottom: 2px solid #09090b;
+            /* zinc 950 - shadow */
             height: 100%;
             display: flex;
             align-items: center;
@@ -345,7 +349,8 @@
         }
 
         .pasillo-step.left {
-            border-left: 3px solid #f59e0b; /* LED amber light left */
+            border-left: 3px solid #f59e0b;
+            /* LED amber light left */
             box-shadow: inset 4px 0 6px -2px rgba(245, 158, 11, 0.4);
             border-top-left-radius: 4px;
             border-bottom-left-radius: 4px;
@@ -359,7 +364,8 @@
         }
 
         .pasillo-step.right {
-            border-right: 3px solid #f59e0b; /* LED amber light right */
+            border-right: 3px solid #f59e0b;
+            /* LED amber light right */
             box-shadow: inset -4px 0 6px -2px rgba(245, 158, 11, 0.4);
             border-top-right-radius: 4px;
             border-bottom-right-radius: 4px;
@@ -600,7 +606,8 @@
                 right: 10px !important;
                 padding: 8px 16px !important;
                 border-radius: 12px !important;
-                display: flex !important; /* Forzamos flexbox si está visible */
+                display: flex !important;
+                /* Forzamos flexbox si está visible */
                 flex-direction: row !important;
                 align-items: center !important;
                 justify-content: space-between !important;
@@ -619,7 +626,7 @@
             }
 
             /* Ajuste de textos en una sola línea */
-            #seat-counter > div:first-child {
+            #seat-counter>div:first-child {
                 margin-bottom: 0 !important;
                 white-space: nowrap !important;
                 font-size: 0.9rem !important;
@@ -675,7 +682,7 @@
     <!-- Cabecera del Espectáculo -->
     <header class="main-header">
         <h1 class="header-title">Torrelles en Dansa</h1>
-        <img src="/static/torrelles-en-dansa-001.webp" alt="Torrelles en Dansa" class="header-logo">
+        <img src="/static/torrelles-en-dansa-002.webp" alt="Torrelles en Dansa" class="header-logo">
     </header>
     <button id="btn-cambiar-identidad" class="btn-secondary" style="display:none;"
         onclick="cambiarIdentidad()">&#128260; Cambiar de animal</button>
@@ -919,7 +926,7 @@
 
             function actualizarBannerConCountdown() {
                 banner.className = "auto-saving";
-                banner.style.background = ""; 
+                banner.style.background = "";
                 banner.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; gap: 8px;">
                         <div>
