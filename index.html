@@ -1295,11 +1295,15 @@
         }
 
         function cambiarIdentidad() {
-            const warning1 = "⚠️ ¡ATENCIÓN! Vas a cerrar sesión y perder tu turno.\n\nEsta acción NO se puede deshacer.\n\n¿Estás completamente seguro?";
-            const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con el cierre de sesión?";
+            if (taquillaModeActivo) {
+                if (!confirm("¿Seguro que deseas cambiar de identidad y cerrar la sesión actual?")) return;
+            } else {
+                const warning1 = "⚠️ ¡ATENCIÓN! Vas a cerrar sesión y perder tu turno.\n\nEsta acción NO se puede deshacer.\n\n¿Estás completamente seguro?";
+                const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con el cierre de sesión?";
 
-            if (!confirm(warning1)) return;
-            if (!confirm(warning2)) return;
+                if (!confirm(warning1)) return;
+                if (!confirm(warning2)) return;
+            }
 
             localStorage.removeItem('animal');
             localStorage.removeItem('adjetivo');
@@ -1343,7 +1347,6 @@
 
             container.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: white;">
-                    <h2 style="font-family: 'Permanent Marker', cursive, sans-serif; font-size: 2rem; color: #ef4444; margin-bottom: 1.5rem;">Torrelles en Dansa</h2>
                     <div id="dia-espectaculo-box" style="margin: 1.5rem auto; padding: 1.5rem; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; max-width: 620px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);">
                         
                         <div id="dia-qrcode-container" style="display:none; background: white; padding: 1.25rem; border-radius: 12px; width: fit-content; margin: 0 auto 1.5rem auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
