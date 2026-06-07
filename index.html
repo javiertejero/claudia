@@ -912,6 +912,7 @@
         let autoSaveTimeout = null;
         let autoSaveInterval = null;
         let autoSaveCancelled = false;
+        let esActivo = false;
 
         function iniciarAutoGuardado() {
             if (autoSaveTimeout || autoSaveCancelled || finalizado || tiempoAgotadoFlag) return;
@@ -1117,29 +1118,44 @@
                             if (quotaEl) quotaEl.innerText = userQuota;
                         }
 
+                        if (data.message) {
+                            alert(data.message);
+                        }
+
+                        const yaEstabaActivo = esActivo;
+                        esActivo = true;
+
                         const banner = document.getElementById("status-banner");
                         banner.className = "active";
-                        // Inyectamos el reloj visualmente en el banner
-                        banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
 
                         if (userQuota === 0) {
                             banner.innerHTML = '❌ No tienes asientos asignados en este sorteo.';
                             banner.className = 'active';
                             document.getElementById('seat-counter').style.display = 'none';
                         } else {
-                            document.getElementById("sessions-container").style.display = "block";
-                            document.getElementById("seat-counter").style.display = "block";
+                            if (!yaEstabaActivo) {
+                                // Inyectamos el reloj visualmente en el banner
+                                banner.innerHTML = `¡Es tu turno! Selecciona tus butacas. <span id="timer-display" style="float: left; color: #991b1b; font-family: monospace; font-size: 1.1em; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px;">⏱️ --:--</span>`;
+                                document.getElementById("sessions-container").style.display = "block";
+                                document.getElementById("seat-counter").style.display = "block";
+                            }
                         }
                         document.getElementById("transfer-request-container").style.display = "block";
 
-                        // Alerta de acceso: campanada triple + voz + flash verde
-                        flashPantalla(true);
-                        tocarCampana(1318, 600, 3); // Mi agudo: fanfarria de entrada
-                        if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
-                        setTimeout(() => hablar('¡Es tu turno! Entra y selecciona tus butacas ahora.'), 800);
+                        if (!yaEstabaActivo) {
+                            // Alerta de acceso: campanada triple + voz + flash verde
+                            flashPantalla(true);
+                            tocarCampana(1318, 600, 3); // Mi agudo: fanfarria de entrada
+                            if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+                            setTimeout(() => hablar('¡Es tu turno! Entra y selecciona tus butacas ahora.'), 800);
+                        }
 
                         // Iniciamos el reloj visual leyendo el dato del servidor
-                        iniciarTemporizador(data.timeout);
+                        if (data.timeout !== undefined) {
+                            iniciarTemporizador(data.timeout);
+                        } else if (!yaEstabaActivo) {
+                            iniciarTemporizador(300);
+                        }
                     }
                 }
 
@@ -1602,12 +1618,20 @@
         }
 
         function iniciarTemporizador(segundos) {
+            if (segundos === undefined || segundos === null || isNaN(segundos)) {
+                return;
+            }
             clearInterval(timerInterval);
             // Calculamos la hora exacta en la que se acaba el tiempo
             const endTime = Date.now() + (segundos * 1000);
-            const display = document.getElementById("timer-display");
 
             timerInterval = setInterval(() => {
+                const display = document.getElementById("timer-display");
+                if (!display) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+
                 // Comparamos el momento actual con el final esperado
                 const tiempoRestante = Math.round((endTime - Date.now()) / 1000);
 
