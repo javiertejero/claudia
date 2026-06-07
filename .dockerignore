@@ -3,3 +3,4 @@ reservas_espectaculo.csv
 .DS_Store
 .env_docker
 *.mp3
+*.db

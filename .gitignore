@@ -11,6 +11,7 @@ wheels/
 
 # Project artifacts
 reservas.db
+data/backups/*.db
 .env
 reservas_espectaculo.csv
 .DS_Store

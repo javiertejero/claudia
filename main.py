@@ -1,7 +1,9 @@
 import asyncio
+import glob
 import html
 import json
 import logging
+import os
 import signal
 import time
 from contextlib import asynccontextmanager
@@ -38,13 +40,8 @@ logger = logging.getLogger(__name__)
 
 async def update_last_seen(client_id: str):
     """Updates the last_seen timestamp for client_id in the queue table."""
-    now = time.time()
-    async with aiosqlite.connect(state.DB_FILE) as db:
-        await db.execute(
-            "UPDATE queue SET last_seen = ? WHERE client_id = ?",
-            (now, client_id),
-        )
-        await db.commit()
+    state.client_last_seen[client_id] = time.time()
+    state.queue_dirty = True
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +150,72 @@ async def cleanup_waiting_queue():
         await broadcast.broadcast_admin_stats()
 
 
+async def persist_state_task():
+    """Vuelca la cola de espera a SQLite en batch cada 3 segundos si ha habido cambios."""
+    while not state.IS_SHUTTING_DOWN:
+        await asyncio.sleep(3)
+        if state.queue_dirty:
+            state.queue_dirty = False
+            now = time.time()
+            async with state.db_write_lock:
+                try:
+                    async with aiosqlite.connect(state.DB_FILE) as db:
+                        await db.execute("PRAGMA journal_mode=WAL;")
+                        await db.execute("PRAGMA synchronous=NORMAL;")
+                        # Merge with in-memory last_seen
+                        async with db.execute(
+                            "SELECT client_id, last_seen FROM queue"
+                        ) as cursor:
+                            existing = {
+                                row[0]: row[1] for row in await cursor.fetchall()
+                            }
+                        existing.update(state.client_last_seen)
+
+                        await db.execute("DELETE FROM queue")
+                        await db.executemany(
+                            "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
+                            [
+                                (client_id, i, existing.get(client_id, now))
+                                for i, client_id in enumerate(state.waiting_queue)
+                            ],
+                        )
+                        await db.commit()
+                except Exception as e:
+                    logger.error("Error persistiendo estado de cola: %s", e)
+                    state.queue_dirty = True
+
+
+async def backup_db_task():
+    """Crea una copia de seguridad rotativa cada 60 segundos."""
+    while not state.IS_SHUTTING_DOWN:
+        await asyncio.sleep(60)
+        backup_dir = "data/backups"
+        os.makedirs(backup_dir, exist_ok=True)
+        now = time.time()
+        timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime(now))
+        backup_file = os.path.join(backup_dir, f"reservas_{timestamp}.db")
+
+        async with state.db_write_lock:
+            try:
+                # Use SQLite's safe backup API
+                async with aiosqlite.connect(state.DB_FILE) as db:
+                    async with aiosqlite.connect(backup_file) as backup_db:
+                        await db.backup(backup_db)
+                logger.info("Backup local creado en %s", backup_file)
+            except Exception as e:
+                logger.error("Error creando backup: %s", e)
+                continue
+
+        # Cleanup backups older than 60 minutes
+        try:
+            for f in glob.glob(os.path.join(backup_dir, "reservas_*.db")):
+                if now - os.path.getctime(f) > 3600:
+                    os.remove(f)
+                    logger.info("Backup local antiguo eliminado: %s", f)
+        except Exception as e:
+            logger.error("Error limpiando backups antiguos: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Capture Uvicorn's original signal handlers
@@ -163,7 +226,7 @@ async def lifespan(app: FastAPI):
         def shutdown_interceptor(signum, frame):
             # 2. Flip our flag IMMEDIATELY upon receiving the signal
             state.IS_SHUTTING_DOWN = True
-            print(f"\n[Interceptor] Signal {signum} caught! Flag flipped.")
+            print(f"\\n[Interceptor] Signal {signum} caught! Flag flipped.")
 
             # 3. Hand control back to Uvicorn so it can gracefully close connections
             if signum == signal.SIGINT and callable(original_sigint):
@@ -182,13 +245,43 @@ async def lifespan(app: FastAPI):
     await bootstrap_db.init_db()
     # Iniciar la tarea de limpieza en segundo plano
     cleanup_task = asyncio.create_task(cleanup_waiting_queue())
+    persist_task = asyncio.create_task(persist_state_task())
+    backup_task = asyncio.create_task(backup_db_task())
     try:
         yield
     finally:
         # Cancelar la tarea de limpieza cuando la aplicación se detiene
         cleanup_task.cancel()
+        backup_task.cancel()
+
+        # Force a final flush synchronously before exiting
+        if state.queue_dirty:
+            logger.info("Realizando volcado final de memoria completado a SQLite...")
+            try:
+                async with aiosqlite.connect(state.DB_FILE) as db:
+                    await db.execute("PRAGMA journal_mode=WAL;")
+                    await db.execute("DELETE FROM queue")
+                    await db.executemany(
+                        "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
+                        [
+                            (
+                                client_id,
+                                i,
+                                state.client_last_seen.get(client_id, time.time()),
+                            )
+                            for i, client_id in enumerate(state.waiting_queue)
+                        ],
+                    )
+                    await db.commit()
+                logger.info("Volcado final de memoria completado.")
+            except Exception as e:
+                logger.error("Error en el volcado final: %s", e)
+
+        persist_task.cancel()
         try:
-            await cleanup_task
+            await asyncio.gather(
+                cleanup_task, persist_task, backup_task, return_exceptions=True
+            )
         except asyncio.CancelledError:
             pass
 
@@ -262,33 +355,13 @@ async def expire_user_session(client_id: str):
 
 
 async def sync_queue_to_db():
-    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite.
-
-    Preserves each client's existing last_seen so that a queue reshuffle
-    (e.g. cleanup or shuffle) does not unfairly reset disconnection timers.
-    """
+    """Sincroniza el estado de waiting_queue con la tabla queue en SQLite."""
     if state.IS_SHUTTING_DOWN:
         logger.warning(
             "[SYNC_QUEUE] Aplicación apagándose, no se sincroniza la cola a la BD."
         )
         return
-    now = time.time()
-    async with state.queue_lock:
-        async with aiosqlite.connect(state.DB_FILE) as db:
-            # 1. Backup existing last_seen values before wiping the table
-            async with db.execute("SELECT client_id, last_seen FROM queue") as cursor:
-                existing = {row[0]: row[1] for row in await cursor.fetchall()}
-
-            await db.execute("DELETE FROM queue")
-            await db.executemany(
-                "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
-                [
-                    # Preserve original last_seen; fall back to now only for brand-new entries
-                    (client_id, i, existing.get(client_id, now))
-                    for i, client_id in enumerate(state.waiting_queue)
-                ],
-            )
-            await db.commit()
+    state.queue_dirty = True
 
 
 async def process_queue():
@@ -299,24 +372,7 @@ async def process_queue():
             if not state.waiting_queue:
                 break
             next_client = state.waiting_queue.pop(0)
-            async with aiosqlite.connect(state.DB_FILE) as db:
-                # Backup existing last_seen values before wiping the table
-                async with db.execute(
-                    "SELECT client_id, last_seen FROM queue"
-                ) as cursor:
-                    existing = {row[0]: row[1] for row in await cursor.fetchall()}
-
-                now = time.time()
-                await db.execute("DELETE FROM queue")
-                await db.executemany(
-                    "INSERT INTO queue (client_id, position, last_seen) VALUES (?, ?, ?)",
-                    [
-                        # Preserve original last_seen; fall back to now only for brand-new entries
-                        (client_id, i, existing.get(client_id, now))
-                        for i, client_id in enumerate(state.waiting_queue)
-                    ],
-                )
-                await db.commit()
+            state.queue_dirty = True
 
         state.active_users.add(next_client)
         state.virtuales_procesados += 1
