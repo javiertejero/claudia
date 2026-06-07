@@ -9,3 +9,9 @@ lint:
 
 test:
     uv run --frozen pytest
+
+
+build_pdf:
+    uv tool install md2pdf[cli]
+    md2pdf --input manual_admin.md --output static/manual_admin.pdf
+    md2pdf --input manual_usuario.md --output static/manual_usuario.pdf

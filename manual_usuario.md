@@ -26,7 +26,7 @@ En el mapa interactivo verás la distribución de la sala:
 ### 4. Guardar tu Reserva 💾
 * **Límite (Cuota)**: Tienes una cuota asignada de butacas (ej. un máximo de 6). Puedes ver tu progreso en la barra inferior (ej. `2/6`).
 * **Auto-guardado**: Al alcanzar el máximo de tu cuota, comenzará una cuenta atrás automática de 15 segundos para guardar tu selección. Puedes pulsar **Cancelar** si quieres cambiar alguna butaca.
-* **Guardar Manual**: En cualquier momento puedes pulsar el botón negro **✅ Guardar Reserva** para confirmar tu selección.
+* **Guardar Manual**: En cualquier momento puedes pulsar el botón negro "✅ **Guardar Reserva**" para confirmar tu selección.
 
 ### 5. Código de Acceso QR 🎫
 Una vez guardada la reserva con éxito, verás una tarjeta con:

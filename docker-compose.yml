@@ -7,7 +7,7 @@ services:
     volumes:
       - .:/app
       # Mapeamos una carpeta local 'data' al contenedor para que la base de datos sea persistente
-      - ./data:/app/data
+      - ./data:/app/data2
     env_file: .env_docker
     # Optional: explicitly tell compose to use SIGTERM
     stop_signal: SIGTERM
