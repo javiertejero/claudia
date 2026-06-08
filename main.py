@@ -406,6 +406,15 @@ async def process_queue():
     await broadcast.broadcast_admin_stats()
 
 
+def get_client_ip(request: Request | WebSocket) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "127.0.0.1"
+
+
 @app.get("/")
 async def get_index():
     return FileResponse("index.html")
@@ -701,7 +710,7 @@ async def get_mi_hash(id: str = ""):
 
 
 @app.get("/api/transfer/validate")
-async def transfer_validate(token: str = "", emisor: str = ""):
+async def transfer_validate(request: Request, token: str = "", emisor: str = ""):
     """Valida un token de transferencia y devuelve cuántas butacas puede transferir el emisor.
 
     - token: hash_transferencia del receptor (quien pide la cuota).
@@ -715,6 +724,16 @@ async def transfer_validate(token: str = "", emisor: str = ""):
     """
     from identity import normalize_combination
 
+    ip = get_client_ip(request)
+    remaining = rate_limiting.get_block_remaining(ip)
+    if remaining > 0:
+        return JSONResponse(
+            {
+                "error": f"Esta IP está temporalmente bloqueada por intentos fallidos. Inténtalo de nuevo en {remaining} segundos."
+            },
+            status_code=429,
+        )
+
     if not token:
         return JSONResponse({"error": "token requerido"}, status_code=400)
 
@@ -726,9 +745,12 @@ async def transfer_validate(token: str = "", emisor: str = ""):
 
     normalized_emisor = normalize_combination(emisor)
     if normalized_emisor not in state.VALID_COMBINATIONS:
+        rate_limiting.register_failed_attempt(ip)
         return JSONResponse(
             {"error": "Identidad del emisor no válida"}, status_code=404
         )
+
+    rate_limiting.register_successful_attempt(ip)
 
     if normalized_emisor == receptor_id:
         return JSONResponse(
@@ -781,6 +803,16 @@ async def transfer_confirm(request: Request):
     """
     from identity import normalize_combination
 
+    ip = get_client_ip(request)
+    remaining = rate_limiting.get_block_remaining(ip)
+    if remaining > 0:
+        return JSONResponse(
+            {
+                "error": f"Esta IP está temporalmente bloqueada por intentos fallidos. Inténtalo de nuevo en {remaining} segundos."
+            },
+            status_code=429,
+        )
+
     body = await request.json()
     token = body.get("token", "")
     emisor_raw = body.get("emisor", "")
@@ -797,9 +829,12 @@ async def transfer_confirm(request: Request):
 
     normalized_emisor = normalize_combination(emisor_raw)
     if normalized_emisor not in state.VALID_COMBINATIONS:
+        rate_limiting.register_failed_attempt(ip)
         return JSONResponse(
             {"error": "Identidad del emisor no válida"}, status_code=404
         )
+
+    rate_limiting.register_successful_attempt(ip)
 
     if normalized_emisor == receptor_id:
         return JSONResponse(
@@ -888,15 +923,6 @@ async def transfer_confirm(request: Request):
         "nueva_cuota_emisor": nueva_cuota_emisor,
         "nueva_cuota_receptor": nueva_cuota_receptor,
     }
-
-
-def get_client_ip(websocket: WebSocket) -> str:
-    forwarded = websocket.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if websocket.client:
-        return websocket.client.host
-    return "127.0.0.1"
 
 
 @app.websocket("/ws/{client_id}")

@@ -209,3 +209,117 @@ class TestHashGeneration:
         for _ in range(50):
             h = secrets.token_urlsafe(16)
             assert re.match(r"^[A-Za-z0-9_\-]+$", h), f"Hash no URL-safe: {h}"
+
+
+# ---------------------------------------------------------------------------
+# Tests de endpoint y throttling (con TestClient)
+# ---------------------------------------------------------------------------
+
+
+class TestTransferRateLimiting:
+    """Prueba el throttling/rate limiting en los endpoints de transferencia."""
+
+    @pytest.fixture(autouse=True)
+    def setup_api(self):
+        """Inicializa la base de datos de test y limpia bloques de rate limiting."""
+        import asyncio
+
+        import bootstrap_db
+        import rate_limiting
+        import state
+
+        # Inicializar la base de datos
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(bootstrap_db.init_db())
+        loop.close()
+
+        # Asegurar rate limiting activo en state y limpiar bloques
+        self.orig_rate_limit = state.RATE_LIMIT
+        state.RATE_LIMIT = True
+        rate_limiting.ip_blocks.clear()
+
+        yield
+
+        state.RATE_LIMIT = self.orig_rate_limit
+        rate_limiting.ip_blocks.clear()
+
+    def test_validate_success_resets_rate_limit(self, two_users):
+        import time
+
+        from fastapi.testclient import TestClient
+
+        import rate_limiting
+        from main import app
+
+        client = TestClient(app)
+        # Meter un fallo para una IP ficticia con expiración en el pasado
+        rate_limiting.ip_blocks["testclient"] = {
+            "failures": 2,
+            "blocked_until": time.time() - 10,
+        }
+        assert rate_limiting.get_block_remaining("testclient") == 0
+        assert "testclient" in rate_limiting.ip_blocks
+
+        # Llamar a validate con una combinación exitosa
+        token = two_users["receptor_hash"]
+        emisor = two_users["emisor"]  # "delfin_valiente"
+        response = client.get(f"/api/transfer/validate?token={token}&emisor={emisor}")
+
+        assert response.status_code == 200
+        # Debería haber limpiado el rate limit por completo
+        assert "testclient" not in rate_limiting.ip_blocks
+
+    def test_validate_failure_triggers_rate_limit(self, two_users):
+        from fastapi.testclient import TestClient
+
+        import rate_limiting
+        from main import app
+
+        client = TestClient(app)
+        token = two_users["receptor_hash"]
+
+        # Intentar con un emisor inválido
+        response = client.get(
+            f"/api/transfer/validate?token={token}&emisor=animal_invalido"
+        )
+        assert response.status_code == 404
+        assert response.json()["error"] == "Identidad del emisor no válida"
+
+        # Debería estar bloqueado
+        assert rate_limiting.get_block_remaining("testclient") > 0
+
+        # Siguiente petición debería devolver 429
+        response_blocked = client.get(
+            f"/api/transfer/validate?token={token}&emisor={two_users['emisor']}"
+        )
+        assert response_blocked.status_code == 429
+        assert "IP está temporalmente bloqueada" in response_blocked.json()["error"]
+
+    def test_confirm_failure_triggers_rate_limit(self, two_users):
+        from fastapi.testclient import TestClient
+
+        import rate_limiting
+        from main import app
+
+        client = TestClient(app)
+        token = two_users["receptor_hash"]
+
+        # Intentar confirmación con emisor inválido
+        response = client.post(
+            "/api/transfer/confirm",
+            json={"token": token, "emisor": "animal_invalido", "butacas": 1},
+        )
+        assert response.status_code == 404
+        assert response.json()["error"] == "Identidad del emisor no válida"
+
+        # Debería estar bloqueado
+        assert rate_limiting.get_block_remaining("testclient") > 0
+
+        # Intentar de nuevo con datos correctos deberia retornar 429
+        response_blocked = client.post(
+            "/api/transfer/confirm",
+            json={"token": token, "emisor": two_users["emisor"], "butacas": 1},
+        )
+        assert response_blocked.status_code == 429
+        assert "IP está temporalmente bloqueada" in response_blocked.json()["error"]

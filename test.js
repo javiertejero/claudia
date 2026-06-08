@@ -50,8 +50,8 @@ export default function () {
                     socket.setTimeout(function () {
                         const sesiones = ['11h', '12:45h', '18h'];
                         const sesionAleatoria = sesiones[getRandomInt(0, 2)];
-                        // Asumimos que tienes hasta 50-60 butacas inicializadas
-                        const asientoAleatorio = getRandomInt(1, 50);
+                        // Asumimos que tienes hasta 243 butacas inicializadas
+                        const asientoAleatorio = getRandomInt(1, 243);
 
                         socket.send(JSON.stringify({
                             action: "toggle",

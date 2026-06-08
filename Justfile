@@ -14,6 +14,10 @@ lint:
 test:
     uv run --frozen pytest
 
+fly_testing:
+    fly secrets set RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True
+    k6 run test_fly.js
+    fly secrets unset RATE_LIMIT DISABLE_IDENTITY_CHECKS
 
 build_pdf:
     uv tool install md2pdf[cli]

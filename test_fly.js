@@ -20,13 +20,13 @@ export default function () {
     const clientId = `bot_${__VU}_${__ITER}`;
     const nombre = `Usuario${__VU}`;
     const apellido = `Test${__ITER}`;
-    
+
     const url = `wss://claudia.fly.dev/ws/${clientId}?nombre=${nombre}&apellido=${apellido}`;
 
     const res = ws.connect(url, {}, function (socket) {
         let isActive = false;
         let clicsRealizados = 0;
-        
+
         socket.on('open', function open() {
             // Conexión establecida, esperando instrucciones del servidor
         });
@@ -48,20 +48,20 @@ export default function () {
                     socket.setTimeout(function () {
                         const sesiones = ['11h', '12:45h', '18h'];
                         const sesionAleatoria = sesiones[getRandomInt(0, 2)];
-                        // Asumimos que tienes hasta 50-60 butacas inicializadas
-                        const asientoAleatorio = getRandomInt(1, 50);
+                        // Asumimos que tienes hasta 243 butacas inicializadas
+                        const asientoAleatorio = getRandomInt(1, 243);
 
                         socket.send(JSON.stringify({
                             action: "toggle",
                             seat_number: asientoAleatorio,
                             session_time: sesionAleatoria
                         }));
-                        
+
                         clicsRealizados++;
                     }, 500);
                 } else {
                     // Ya hemos elegido 3 butacas, simulamos pulsar "Finalizar Reserva"
-                    socket.setTimeout(function() {
+                    socket.setTimeout(function () {
                         socket.send(JSON.stringify({ action: "finalizar" }));
                         socket.close();
                     }, 1000);
@@ -77,7 +77,7 @@ export default function () {
         // 4. Timeout de seguridad del script (3.5 minutos máximo en cola)
         socket.setTimeout(function () {
             socket.close();
-        }, 210000); 
+        }, 210000);
     });
 
     // Validamos que el protocolo hizo el 'Upgrade' a WebSocket correctamente (HTTP 101)
