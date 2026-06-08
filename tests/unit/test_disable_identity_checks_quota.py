@@ -13,14 +13,14 @@ def reset_state():
     original_quotas = state.USER_QUOTAS.copy()
     original_db = state.DB_FILE
     state.USER_QUOTAS.clear()
-    state.DB_FILE = "tests/test_temp.db"
+    state.DB_FILE = "tests/unit/test_temp.db"
     yield
     state.DISABLE_IDENTITY_CHECKS = original_disable
     state.USER_QUOTAS = original_quotas
     state.DB_FILE = original_db
-    if os.path.exists("tests/test_temp.db"):
+    if os.path.exists("tests/unit/test_temp.db"):
         try:
-            os.remove("tests/test_temp.db")
+            os.remove("tests/unit/test_temp.db")
         except Exception:
             pass
 

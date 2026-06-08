@@ -12,7 +12,7 @@ lint:
     uv run --frozen prek run --all-files
 
 test *ARGS:
-    uv run --frozen pytest {{ARGS}}
+    uv run --frozen pytest {{ if ARGS == "" { "tests/unit" } else { ARGS } }}
 
 fly_testing:
     fly secrets set RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True

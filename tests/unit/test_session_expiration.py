@@ -14,7 +14,7 @@ from main import expire_user_session
 @pytest.fixture(autouse=True)
 def reset_state():
     original_db = state.DB_FILE
-    state.DB_FILE = "tests/test_session_temp.db"
+    state.DB_FILE = "tests/unit/test_session_temp.db"
 
     state.USER_QUOTAS.clear()
     state.VALID_COMBINATIONS.clear()
@@ -33,9 +33,9 @@ def reset_state():
     state.active_users_names.clear()
     state.waiting_queue = []
 
-    if os.path.exists("tests/test_session_temp.db"):
+    if os.path.exists("tests/unit/test_session_temp.db"):
         try:
-            os.remove("tests/test_session_temp.db")
+            os.remove("tests/unit/test_session_temp.db")
         except Exception:
             pass
 
