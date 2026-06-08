@@ -362,6 +362,149 @@
             font-weight: bold;
             text-transform: uppercase;
         }
+
+        /* Contenedor de la barra de acciones */
+        .admin-actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-action:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action.taquilla {
+            background: #d97706;
+            color: white;
+            box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+        }
+        .btn-action.taquilla:hover {
+            background: #b45309;
+        }
+
+        .btn-action.combo {
+            background: #7c3aed;
+            color: white;
+            box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+        }
+        .btn-action.combo:hover {
+            background: #6d28d9;
+        }
+
+        .btn-action.export {
+            background: #475569;
+            color: white;
+            box-shadow: 0 2px 4px rgba(71, 85, 105, 0.3);
+        }
+        .btn-action.export:hover {
+            background: #334155;
+        }
+
+        .btn-action.manual {
+            background: #475569;
+            color: white;
+            box-shadow: 0 2px 4px rgba(71, 85, 105, 0.3);
+        }
+        .btn-action.manual:hover {
+            background: #334155;
+        }
+
+        .btn-action.download-quotas {
+            background: #0891b2;
+            color: white;
+            box-shadow: 0 2px 4px rgba(8, 145, 178, 0.3);
+        }
+        .btn-action.download-quotas:hover {
+            background: #0e7490;
+        }
+
+        .btn-action.upload-quotas {
+            background: #059669;
+            color: white;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+        }
+        .btn-action.upload-quotas:hover {
+            background: #047857;
+        }
+
+        .btn-action.logout {
+            background: #64748b;
+            color: white;
+            box-shadow: 0 2px 4px rgba(100, 116, 139, 0.3);
+        }
+        .btn-action.logout:hover {
+            background: #475569;
+        }
+
+        .btn-action.reset-db {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+        }
+        .btn-action.reset-db:hover {
+            background: #dc2626;
+        }
+
+        /* Tarjetas de información y configuración */
+        .info-card {
+            background: #f1f5f9;
+            padding: 8px 15px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .info-card.virtual-passes {
+            margin-left: 20px;
+            margin-right: auto;
+        }
+
+        .info-card.max-capacity {
+            background: #f0fdf4;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .info-card.show-day {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        @media (max-width: 1200px) {
+            .info-card.virtual-passes {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
     </style>
 
 </head>
@@ -391,68 +534,47 @@
         <div class="header">
             <div>
                 <h1 style="margin-bottom: 0;">Control de Aforo</h1>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="abrirTaquilla()"
-                        style="background: #d97706; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(217,119,6,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                <div class="admin-actions-bar">
+                    <button onclick="abrirTaquilla()" class="btn-action taquilla">
                         🎫 Taquilla (Saltar Cola)
                     </button>
-                    <button onclick="toggleComboPanel()"
-                        style="background: #7c3aed; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    <button onclick="toggleComboPanel()" class="btn-action combo">
                         📋 Combinaciones
                     </button>
-                    <button id="export-btn">
+                    <button id="export-btn" class="btn-action export">
                         📥 Exportar CSV
                     </button>
-                    <a href="/static/manual_admin.pdf" download
-                        style="background: #475569; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; text-decoration: none; transition: background 0.15s; box-shadow: 0 2px 4px rgba(71,85,105,0.3);"
-                        onmouseover="this.style.background='#334155'"
-                        onmouseout="this.style.background='#475569'">
+                    <a href="/static/manual_admin.pdf" download class="btn-action manual">
                         📖 Manual Admin (PDF)
                     </a>
-                    <button id="download-quotas-btn"
-                        style="background: #0891b2; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;"
-                        onclick="descargarCuotas()">
+                    <button id="download-quotas-btn" class="btn-action download-quotas" onclick="descargarCuotas()">
                         📊 Descargar Cuotas
                     </button>
-                    <button id="upload-quotas-btn"
-                        style="background: #059669; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;"
-                        onclick="document.getElementById('quotas-file-input').click()">
+                    <button id="upload-quotas-btn" class="btn-action upload-quotas" onclick="document.getElementById('quotas-file-input').click()">
                         📤 Cargar Cuotas
                     </button>
-                    <input type="file" id="quotas-file-input" accept=".csv" style="display:none"
-                        onchange="cargarCuotas(this)">
-                    <button id="logout-btn" onclick="cerrarSesion()" title="Cierra sesión de admin y taquilla">
+                    <input type="file" id="quotas-file-input" accept=".csv" style="display:none" onchange="cargarCuotas(this)">
+                    <button id="logout-btn" onclick="cerrarSesion()" title="Cierra sesión de admin y taquilla" class="btn-action logout">
                         🔒 Cerrar sesión
                     </button>
-                    <button onclick="resetDatabase()"
-                        style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(239,68,68,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                    <button onclick="resetDatabase()" class="btn-action reset-db">
                         ⚠️ Borrar Base de Datos
                     </button>
-                    <div
-                        style="background: #f1f5f9; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #cbd5e1; margin-right: auto; margin-left: 20px;">
-                        <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter"
-                                style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
-                        <button onclick="ws.send(JSON.stringify({action: 'reset_counter'}))"
-                            style="background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #475569;">
+                    <div class="info-card virtual-passes">
+                        <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter" style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
+                        <button onclick="ws.send(JSON.stringify({action: 'reset_counter'}))" style="background: #e2e8f0; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #475569;">
                             🔄 Reset
                         </button>
                     </div>
-                    <div
-                        style="background: #f0fdf4; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #86efac;">
+                    <div class="info-card max-capacity">
                         <span style="font-size: 0.9rem; color: #166534; white-space: nowrap;">👥 Aforo máx.:</span>
-                        <button id="max-users-dec" onclick="changeMaxUsers(-1)"
-                            style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">−</button>
-                        <strong id="max-users-value"
-                            style="font-size: 1.2rem; color: #15803d; min-width: 1.5ch; text-align: center;">2</strong>
-                        <button id="max-users-inc" onclick="changeMaxUsers(1)"
-                            style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">+</button>
+                        <button id="max-users-dec" onclick="changeMaxUsers(-1)" style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">−</button>
+                        <strong id="max-users-value" style="font-size: 1.2rem; color: #15803d; min-width: 1.5ch; text-align: center;">2</strong>
+                        <button id="max-users-inc" onclick="changeMaxUsers(1)" style="background: #dcfce7; border: 1px solid #86efac; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: #166534; line-height: 1;">+</button>
                     </div>
-                    <div
-                        id="taquilla-mode-container"
-                        style="background: #eff6ff; padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid #bfdbfe;">
+                    <div id="taquilla-mode-container" class="info-card show-day">
                         <span style="font-size: 0.9rem; color: #1e40af; white-space: nowrap;">📅 Día del Espectáculo (QR):</span>
-                        <button id="taquilla-mode-toggle" onclick="toggleTaquillaMode()"
-                            style="background: #dbeafe; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; color: #1e40af; transition: all 0.2s; border: 1px solid #bfdbfe;">
+                        <button id="taquilla-mode-toggle" onclick="toggleTaquillaMode()" style="background: #dbeafe; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold; color: #1e40af; transition: all 0.2s; border: 1px solid #bfdbfe;">
                             Desactivado
                         </button>
                     </div>
