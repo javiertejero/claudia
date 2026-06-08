@@ -469,6 +469,15 @@
             background: #dc2626;
         }
 
+        .btn-action.reset-reservations {
+            background: #f97316;
+            color: white;
+            box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
+        }
+        .btn-action.reset-reservations:hover {
+            background: #ea580c;
+        }
+
         /* Tarjetas de información y configuración */
         .info-card {
             background: #f1f5f9;
@@ -557,8 +566,11 @@
                     <button id="logout-btn" onclick="cerrarSesion()" title="Cierra sesión de admin y taquilla" class="btn-action logout">
                         🔒 Cerrar sesión
                     </button>
+                    <button onclick="resetReservations()" class="btn-action reset-reservations">
+                        ⚠️ Vaciar Reservas
+                    </button>
                     <button onclick="resetDatabase()" class="btn-action reset-db">
-                        ⚠️ Borrar Base de Datos
+                        💥 Borrar Todo (Reset DB)
                     </button>
                     <div class="info-card virtual-passes">
                         <span style="font-size: 0.9rem; color: #475569;">Pases virtuales: <strong id="virtual-counter" style="font-size: 1.2rem; color: #3b82f6;">0</strong></span>
@@ -829,8 +841,8 @@
         }
 
         function resetDatabase() {
-            const warning1 = "⚠️ ¡ATENCIÓN! Vas a BORRAR TODAS LAS RESERVAS del sistema.\n\nEsta acción NO se puede deshacer y expulsará a todos los usuarios que estén conectados ahora mismo.\n\n¿Estás completamente seguro?";
-            const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con la eliminación total de la base de datos?";
+            const warning1 = "🚨 ¡ATENCIÓN! Vas a BORRAR COMPLETAMENTE la base de datos del sistema.\n\nEsta acción NO se puede deshacer y realizará lo siguiente:\n- Eliminar todas las reservas\n- Eliminar y reiniciar todas las cuotas de usuario\n- Vaciar la cola de espera\n- Regenerar la semilla del sistema (invalidando las identidades actuales)\n- Expulsar a todos los usuarios conectados ahora mismo.\n\n¿Estás completamente seguro?";
+            const warning2 = "ÚLTIMA CONFIRMACIÓN DE SEGURIDAD:\n\n¿Proceder con la eliminación total de la base de datos y reinicio del sistema?";
 
             // Doble confirmación por seguridad
             if (confirm(warning1)) {
@@ -846,6 +858,29 @@
                     setTimeout(() => {
                         btn.innerHTML = textoOriginal;
                         btn.style.background = "#ef4444";
+                    }, 2000);
+                }
+            }
+        }
+
+        function resetReservations() {
+            const warning1 = "⚠️ ¡ATENCIÓN! Vas a liberar TODAS LAS RESERVAS de asientos del sistema.\n\nEsta acción liberará todas las butacas pero CONSERVARÁ:\n- Las cuotas asignadas a los usuarios\n- La cola de espera\n- Las sesiones de los usuarios conectados (no serán expulsados)\n\n¿Estás seguro de que deseas vaciar todas las reservas?";
+            const warning2 = "ÚLTIMA CONFIRMACIÓN:\n\n¿Proceder con el borrado de las reservas de asientos?";
+
+            // Doble confirmación por seguridad
+            if (confirm(warning1)) {
+                if (confirm(warning2)) {
+                    // Enviamos la orden al servidor a través de la conexión segura existente
+                    ws.send(JSON.stringify({ action: "reset_reservations" }));
+
+                    // Feedback visual temporal en el botón
+                    const btn = document.querySelector("button[onclick='resetReservations()']");
+                    const textoOriginal = btn.innerHTML;
+                    btn.innerHTML = "⏳ Borrando...";
+                    btn.style.background = "#c2410c";
+                    setTimeout(() => {
+                        btn.innerHTML = textoOriginal;
+                        btn.style.background = "#f97316";
                     }, 2000);
                 }
             }

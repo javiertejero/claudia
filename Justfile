@@ -5,7 +5,7 @@ download_music:
 launch: download_music
     uv run --frozen --env-file .env fastapi run main.py
 
-launch_for_testing: download_music
+launch_for_k6_testing: download_music
     RATE_LIMIT=False DISABLE_IDENTITY_CHECKS=True uv run --frozen --env-file .env fastapi run main.py
 
 lint:

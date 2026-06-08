@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 import state
 from bootstrap_db import TOTAL_CUOTAS, init_db, save_state_to_db
-from broadcast import broadcast_admin_stats
+from broadcast import broadcast_admin_stats, broadcast_seats
 from seats import get_all_seats
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,19 @@ async def admin_websocket(websocket: WebSocket, secret: str):
                         )
                         await save_state_to_db("taquilla_mode", 1 if value else 0)
                         await broadcast_admin_stats()
+                if payload.get("action") == "reset_reservations":
+                    logger.warning(
+                        "El administrador ha solicitado el BORRADO DE TODAS LAS RESERVAS (vaciar butacas)."
+                    )
+
+                    async with aiosqlite.connect(state.DB_FILE) as db:
+                        await db.execute(
+                            "UPDATE seats SET status = 'free', owner_id = NULL, owner_name = NULL, used_at = NULL"
+                        )
+                        await db.commit()
+
+                    await broadcast_seats()
+
                 if payload.get("action") == "reset_db":
                     logger.warning(
                         "El administrador ha solicitado el RESETEO TOTAL de la base de datos."
