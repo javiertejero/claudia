@@ -207,10 +207,10 @@ async def backup_db_task():
                 logger.error("Error creando backup: %s", e)
                 continue
 
-        # Cleanup backups older than 60 minutes
+        # Cleanup backups older than 24 hours
         try:
             for f in glob.glob(os.path.join(backup_dir, "reservas_*.db")):
-                if now - os.path.getctime(f) > 3600:
+                if now - os.path.getctime(f) > 86400:
                     os.remove(f)
                     logger.info("Backup local antiguo eliminado: %s", f)
         except Exception as e:

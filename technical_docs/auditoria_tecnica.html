@@ -134,7 +134,7 @@ sequenceDiagram
                 </div>
                 <div class="bg-white p-4 rounded-lg shadow-sm border border-green-200">
                     <strong class="text-green-700 block mb-1">✅ 4. Backups Locales Rotativos</strong>
-                    Mediante la tarea asíncrona <code>backup_db_task</code>, se clona toda la base de datos cada 60 segundos hacia <code>data/backups/</code> sin romper transacciones. Además, se purgan automáticamente los archivos con más de 1 hora de antigüedad. 
+                    Mediante la tarea asíncrona <code>backup_db_task</code>, se clona toda la base de datos cada 60 segundos hacia <code>data/backups/</code> sin romper transacciones. Además, se purgan automáticamente los archivos con más de 24 horas de antigüedad. 
                     <em class="text-sm text-gray-500">(Nota: Sigue existiendo riesgo de pérdida total si falla el disco físico de Fly.io)</em>.
                 </div>
             </div>
